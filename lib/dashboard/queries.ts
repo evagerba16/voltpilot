@@ -9,10 +9,23 @@ import {
 import { formatCurrency, formatPercent } from "@/lib/analytics/format";
 import { getProjectStats } from "@/lib/projects/queries";
 
+export function isPortfolioEmpty(
+  stats: Awaited<ReturnType<typeof getProjectStats>>
+) {
+  return (
+    stats.activeProjects === 0 &&
+    stats.draftEstimates === 0 &&
+    stats.proposalsSent === 0 &&
+    stats.estimatedRevenue === 0
+  );
+}
+
 export async function getDashboardStats() {
   const stats = await getProjectStats();
 
-  return [
+  return {
+    isPortfolioEmpty: isPortfolioEmpty(stats),
+    items: [
     {
       title: "Active Projects",
       value: String(stats.activeProjects),
@@ -48,5 +61,6 @@ export async function getDashboardStats() {
       changeType: stats.averageMargin >= 10 ? ("positive" as const) : ("neutral" as const),
       icon: Percent,
     },
-  ];
+    ],
+  };
 }

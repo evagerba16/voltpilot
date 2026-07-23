@@ -185,7 +185,7 @@ export function ProposalsTable({
                     description={
                       hasFilters
                         ? "Try a different search term or clear your filters."
-                        : "Add a proposal from a finalized estimate to send a bid to your customer."
+                        : "Finalize an estimate first, then create a proposal to send a professional bid to your customer."
                     }
                     action={
                       hasFilters ? (
@@ -196,7 +196,7 @@ export function ProposalsTable({
                           Clear filters
                         </Link>
                       ) : onCreateProposal && canEdit ? (
-                        <Button onClick={onCreateProposal}>Add proposal</Button>
+                        <Button onClick={onCreateProposal}>Create your first proposal</Button>
                       ) : null
                     }
                   />

@@ -265,7 +265,7 @@ export function ProjectsTable({
                         ? "Try a different search term or clear your filters."
                         : view === "archived"
                           ? "Archived jobs appear here when you archive them from the active list."
-                          : "Add a job to start estimating, building proposals, and tracking bids."
+                          : "Start with a customer, then add a project to begin estimating and sending proposals."
                     }
                     action={
                       search ||
@@ -280,7 +280,7 @@ export function ProjectsTable({
                         </Link>
                       ) : view !== "archived" && canEdit ? (
                         <Link href="/projects/new" className={buttonVariants()}>
-                          Add project
+                          Create your first project
                         </Link>
                       ) : null
                     }

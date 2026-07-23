@@ -62,10 +62,10 @@ export function CreateProposalDialog({
         <EmptyState
           icon={FileText}
           title="No estimates yet"
-          description="Price the job with an estimate first, then turn it into a proposal to send to your customer."
+          description="Create and finalize an estimate first, then turn it into a proposal to send to your customer."
           action={
             <Link href="/estimates" className={buttonVariants()} onClick={onClose}>
-              Go to estimates
+              Create your first estimate
             </Link>
           }
           className="py-8"

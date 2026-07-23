@@ -71,10 +71,10 @@ export function CreateEstimateDialog({
         <EmptyState
           icon={FolderKanban}
           title="No projects yet"
-          description="Add a project first, then come back here to start estimating."
+          description="Create a project first, then return here to build your first estimate."
           action={
             <Link href="/projects/new" className={buttonVariants()} onClick={onClose}>
-              Add project
+              Create your first project
             </Link>
           }
           className="py-8"

@@ -124,7 +124,7 @@ export function EstimatesTable({
                     description={
                       hasFilters
                         ? "Try a different search term or clear your filters."
-                        : "Add an estimate to price a project and turn it into a proposal when you're ready to bid."
+                        : "Create an estimate to price a project, then turn it into a professional proposal when you are ready to bid."
                     }
                     action={
                       hasFilters ? (
@@ -135,7 +135,7 @@ export function EstimatesTable({
                           Clear filters
                         </Link>
                       ) : onCreateEstimate ? (
-                        <Button onClick={onCreateEstimate}>Add estimate</Button>
+                        <Button onClick={onCreateEstimate}>Create your first estimate</Button>
                       ) : null
                     }
                   />

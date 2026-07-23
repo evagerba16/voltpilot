@@ -10,7 +10,7 @@ import {
   isSubscriptionActive,
 } from "@/lib/billing/queries";
 import { getCompanySettings } from "@/lib/company/queries";
-import { DEFAULT_COMPANY_NAME } from "@/lib/company/types";
+import { resolveDashboardHeaderLabel } from "@/lib/dashboard/header-label";
 import { hasPermission } from "@/lib/teams/permissions";
 import { getTeamAccessDenial } from "@/lib/teams/queries";
 
@@ -57,9 +57,15 @@ export default async function DashboardLayout({
     context.userId
   );
 
+  const headerLabel = resolveDashboardHeaderLabel({
+    companyName: companySettings.company_name,
+    organizationName: context.organizationName,
+    user,
+  });
+
   return (
     <DashboardShell
-      companyName={companySettings.company_name || context.organizationName || DEFAULT_COMPANY_NAME}
+      companyName={headerLabel}
       userEmail={context.userEmail}
       roleLabel={context.role}
       permissions={context.permissions}

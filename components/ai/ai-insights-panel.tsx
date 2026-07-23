@@ -3,11 +3,14 @@
 import Link from "next/link";
 import {
   AlertTriangle,
+  Calculator,
   CircleAlert,
   Info,
   Sparkles,
 } from "lucide-react";
 
+import { EmptyState } from "@/components/ui/empty-state";
+import { buttonVariants } from "@/components/ui/button-variants";
 import type { DashboardInsightsData } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +33,11 @@ const severityStyles = {
 };
 
 export function AiInsightsPanel({ data }: AiInsightsPanelProps) {
+  const primaryHref =
+    data.items.length > 0 ? data.items[0].href : "/estimates";
+  const primaryLabel =
+    data.items.length > 0 ? "Review AI recommendations" : "Create your first estimate";
+
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="flex flex-col gap-3 border-b border-border px-6 py-4 sm:flex-row sm:items-start sm:justify-between">
@@ -73,9 +81,17 @@ export function AiInsightsPanel({ data }: AiInsightsPanelProps) {
 
       <div className="divide-y divide-border/60">
         {data.items.length === 0 ? (
-          <p className="px-6 py-10 text-center text-sm text-muted-foreground">
-            No estimates currently require AI attention.
-          </p>
+          <EmptyState
+            icon={Calculator}
+            title="No AI insights yet"
+            description="Create your first estimate to unlock AI review, margin checks, and portfolio recommendations."
+            action={
+              <Link href="/estimates" className={buttonVariants()}>
+                Create your first estimate
+              </Link>
+            }
+            className="py-10"
+          />
         ) : (
           data.items.map((item) => (
             <Link
@@ -114,10 +130,13 @@ export function AiInsightsPanel({ data }: AiInsightsPanelProps) {
         )}
       </div>
 
-      <div className="border-t border-border px-6 py-4">
+      <div className="flex flex-col gap-3 border-t border-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <Link href={primaryHref} className={cn(buttonVariants(), "w-full sm:w-auto")}>
+          {primaryLabel}
+        </Link>
         <Link
           href="/ai"
-          className="text-sm font-medium text-primary hover:underline"
+          className="text-center text-sm font-medium text-primary hover:underline sm:text-left"
         >
           Open AI Assistant →
         </Link>

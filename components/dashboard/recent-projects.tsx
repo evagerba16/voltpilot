@@ -34,7 +34,7 @@ export function RecentProjects({ items }: RecentProjectsProps) {
         <EmptyState
           icon={FolderKanban}
           title="No projects yet"
-          description="Create your first project to start building estimates and sending proposals."
+          description="Start with a customer and project, then build estimates and proposals from one workflow."
           action={
             <Link href="/projects/new" className={buttonVariants()}>
               Create your first project

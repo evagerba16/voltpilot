@@ -246,7 +246,7 @@ export async function getDashboardInsights(
 
   const defaultSummary =
     items.length === 0
-      ? "Your portfolio looks healthy. No estimates currently require urgent AI review."
+      ? "Create your first estimate to start receiving AI review, margin checks, and portfolio recommendations."
       : `${counts.reviewRequired} estimate(s) need review, ${counts.highRisk} high-risk, and ${counts.recommendedActions} recommended action(s).`;
 
   const { isConfigured } = getOpenAIConfig();

@@ -243,7 +243,7 @@ export function CustomersTable({
                     description={
                       search
                         ? "Try a different company name, contact, or email."
-                        : "Add GCs, owners, and repeat clients so you can tie them to projects and bids."
+                        : "Add customers first so you can link projects, estimates, and proposals to the right GCs and owners."
                     }
                     action={
                       search ? (
@@ -254,7 +254,7 @@ export function CustomersTable({
                           Clear search
                         </Link>
                       ) : onAddCustomer && canEdit ? (
-                        <Button onClick={onAddCustomer}>Add customer</Button>
+                        <Button onClick={onAddCustomer}>Add your first customer</Button>
                       ) : null
                     }
                   />
