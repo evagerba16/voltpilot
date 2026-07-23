@@ -15,8 +15,10 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"))
 
 const failures = [];
 
-if (!config.includes('distDir: process.env.NEXT_DIST_DIR ?? ".next-build"')) {
-  failures.push("next.config.ts must default distDir to .next-build");
+if (!config.includes('process.env.VERCEL === "1"') || !config.includes(".next-build")) {
+  failures.push(
+    "next.config.ts must use .next-build locally and .next when VERCEL=1"
+  );
 }
 
 if (!pkg.scripts.dev.includes("NEXT_DIST_DIR=.next")) {
@@ -35,4 +37,6 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("OK: dev (.next) and production (.next-build) caches are isolated.");
+console.log(
+  "OK: dev (.next), local build (.next-build), and Vercel build (.next) are configured."
+);
