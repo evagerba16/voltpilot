@@ -1,0 +1,109 @@
+{
+  "passed": 17,
+  "failed": 0,
+  "checklist": [
+    {
+      "id": "env:NEXT_PUBLIC_SUPABASE_URL",
+      "label": "NEXT_PUBLIC_SUPABASE_URL set",
+      "status": "PASS",
+      "evidence": "value present in .env.local"
+    },
+    {
+      "id": "env:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "label": "NEXT_PUBLIC_SUPABASE_ANON_KEY set",
+      "status": "PASS",
+      "evidence": "value present in .env.local"
+    },
+    {
+      "id": "env:NEXT_PUBLIC_SITE_URL",
+      "label": "NEXT_PUBLIC_SITE_URL set",
+      "status": "PASS",
+      "evidence": "value present in .env.local"
+    },
+    {
+      "id": "env:OPENAI_API_KEY",
+      "label": "OPENAI_API_KEY set (optional)",
+      "status": "PASS",
+      "evidence": "configured"
+    },
+    {
+      "id": "env:RESEND_API_KEY",
+      "label": "RESEND_API_KEY set (optional)",
+      "status": "PASS",
+      "evidence": "configured"
+    },
+    {
+      "id": "env:RESEND_FROM_EMAIL",
+      "label": "RESEND_FROM_EMAIL set (optional)",
+      "status": "PASS",
+      "evidence": "configured"
+    },
+    {
+      "id": "db:migrations",
+      "label": "Migrations 001–017 verified",
+      "status": "PASS",
+      "evidence": "verify-all-migrations.mjs exit 0"
+    },
+    {
+      "id": "build",
+      "label": "npm run build",
+      "status": "PASS",
+      "evidence": "skipped (BETA_VERIFY_SKIP_BUILD=1)"
+    },
+    {
+      "id": "lint",
+      "label": "npm run lint",
+      "status": "PASS",
+      "evidence": "exit 0"
+    },
+    {
+      "id": "estimates:calc",
+      "label": "Estimate calculations",
+      "status": "PASS",
+      "evidence": "verify-estimate-calculations.mjs exit 0"
+    },
+    {
+      "id": "api:/api/health",
+      "label": "/api/health returns 200",
+      "status": "PASS",
+      "evidence": "no 500"
+    },
+    {
+      "id": "api:/api/search?q=test",
+      "label": "/api/search?q=test returns 401",
+      "status": "PASS",
+      "evidence": "no 500"
+    },
+    {
+      "id": "api:/api/ai/estimate-review",
+      "label": "/api/ai/estimate-review returns 401",
+      "status": "PASS",
+      "evidence": "no 500"
+    },
+    {
+      "id": "api:/api/ai/estimate-assistant",
+      "label": "/api/ai/estimate-assistant returns 401",
+      "status": "PASS",
+      "evidence": "no 500"
+    },
+    {
+      "id": "api:/api/analytics/export/csv",
+      "label": "/api/analytics/export/csv returns 401",
+      "status": "PASS",
+      "evidence": "no 500"
+    },
+    {
+      "id": "api:/api/analytics/export/pdf",
+      "label": "/api/analytics/export/pdf returns 401",
+      "status": "PASS",
+      "evidence": "no 500"
+    },
+    {
+      "id": "rls:anon",
+      "label": "Anon cannot read org customers",
+      "status": "PASS",
+      "evidence": "empty result with anon JWT"
+    }
+  ],
+  "at": "2026-07-19T09:18:23.755Z"
+}

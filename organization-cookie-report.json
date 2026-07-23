@@ -1,0 +1,32 @@
+{
+  "passed": 4,
+  "failed": 1,
+  "results": [
+    {
+      "id": "regression.cookie-set-audit",
+      "status": "PASS",
+      "detail": "2 cookie write site(s); 0 in Server Components/layouts/pages/queries"
+    },
+    {
+      "id": "unauth.login",
+      "status": "PASS",
+      "detail": "GET /login returned 200"
+    },
+    {
+      "id": "unauth.login-cookie-error",
+      "status": "PASS",
+      "detail": "No cookie error on login page"
+    },
+    {
+      "id": "unauth.dashboard-redirect",
+      "status": "PASS",
+      "detail": "GET /dashboard returned 307"
+    },
+    {
+      "id": "auth.credentials",
+      "status": "FAIL",
+      "detail": "Set real BETA_TEST_EMAIL and BETA_TEST_PASSWORD in .env.local"
+    }
+  ],
+  "at": "2026-07-18T06:45:55.079Z"
+}
