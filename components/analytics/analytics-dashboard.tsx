@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -18,16 +18,10 @@ import {
   YAxis,
 } from "recharts";
 import {
-  BarChart3,
   Bot,
   CircleDollarSign,
-  Download,
-  FileDown,
-  FileText,
-  FolderKanban,
   Percent,
   PencilLine,
-  RefreshCw,
   Send,
   Sparkles,
   TrendingUp,
@@ -35,7 +29,15 @@ import {
 } from "lucide-react";
 
 import { AiBusinessCoachCard } from "@/components/analytics/ai-business-coach-card";
-import { AiOpportunitiesPanel } from "@/components/analytics/ai-opportunities-panel";
+import { AnalyticsExecutiveOverview } from "@/components/analytics/analytics-executive-overview";
+import { AnalyticsFiltersBar } from "@/components/analytics/analytics-filters-bar";
+import { AnalyticsAiSummary } from "@/components/analytics/analytics-ai-summary";
+import { AnalyticsEmptyState } from "@/components/analytics/analytics-empty-state";
+import {
+  CountTooltip,
+  CurrencyTooltip,
+  PercentTooltip,
+} from "@/components/analytics/analytics-chart-tooltips";
 import { ChartCard } from "@/components/analytics/chart-card";
 import { CustomerIntelligenceCard } from "@/components/analytics/customer-intelligence-card";
 import { EstimateIntelligenceCard } from "@/components/analytics/estimate-intelligence-card";
@@ -43,27 +45,18 @@ import { ProposalIntelligenceCard } from "@/components/analytics/proposal-intell
 import { ProfitForecastCard } from "@/components/analytics/profit-forecast-card";
 import { RevenueForecastCard } from "@/components/analytics/revenue-forecast-card";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { Button } from "@/components/ui/button";
 import {
   formatCurrency,
   formatPercent,
 } from "@/lib/analytics/format";
+import type { PrecomputedAnalyticsViewModels } from "@/lib/analytics/precompute-view-models";
 import {
-  ANALYTICS_DATE_RANGES,
-  ANALYTICS_SECTIONS,
   type AnalyticsData,
   type AnalyticsSection,
   type CustomerFilterOption,
   type ProjectFilterOption,
 } from "@/lib/analytics/types";
-import {
-  buildAnalyticsExportUrl,
-  buildAnalyticsUrl,
-} from "@/lib/analytics/url";
-import type { PrecomputedAnalyticsViewModels } from "@/lib/analytics/precompute-view-models";
-import { PROJECT_STATUSES } from "@/lib/projects/types";
-import { RelativeTime } from "@/components/ui/relative-time";
-import { cn } from "@/lib/utils";
+import { buildAnalyticsUrl } from "@/lib/analytics/url";
 
 type AnalyticsDashboardProps = {
   data: AnalyticsData;
@@ -72,67 +65,6 @@ type AnalyticsDashboardProps = {
   activeSection: AnalyticsSection;
   precomputed: PrecomputedAnalyticsViewModels;
 };
-
-function CurrencyTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: Array<{ value: number }>;
-  label?: string;
-}) {
-  if (!active || !payload?.length) return null;
-
-  return (
-    <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm shadow-md">
-      <p className="font-medium">{label}</p>
-      <p className="text-muted-foreground">{formatCurrency(payload[0].value)}</p>
-    </div>
-  );
-}
-
-function PercentTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: Array<{ value: number }>;
-  label?: string;
-}) {
-  if (!active || !payload?.length) return null;
-
-  return (
-    <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm shadow-md">
-      <p className="font-medium">{label}</p>
-      <p className="text-muted-foreground">{formatPercent(payload[0].value)}</p>
-    </div>
-  );
-}
-
-function CountTooltip({
-  active,
-  payload,
-  label,
-  suffix = "items",
-}: {
-  active?: boolean;
-  payload?: Array<{ value: number }>;
-  label?: string;
-  suffix?: string;
-}) {
-  if (!active || !payload?.length) return null;
-
-  return (
-    <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm shadow-md">
-      <p className="font-medium">{label}</p>
-      <p className="text-muted-foreground">
-        {payload[0].value} {suffix}
-      </p>
-    </div>
-  );
-}
 
 function DrillDownLink({
   href,
@@ -147,13 +79,6 @@ function DrillDownLink({
     </Link>
   );
 }
-
-const ACTIVITY_ICONS = {
-  customer: Users,
-  project: FolderKanban,
-  estimate: PencilLine,
-  proposal: FileText,
-} as const;
 
 function DataTable({
   headers,
@@ -182,11 +107,12 @@ function DataTable({
         <tbody className="divide-y divide-border/60">
           {rows.length === 0 ? (
             <tr>
-              <td
-                colSpan={headers.length}
-                className="px-4 py-8 text-center text-muted-foreground"
-              >
-                {emptyMessage}
+              <td colSpan={headers.length} className="p-0">
+                <AnalyticsEmptyState
+                  compact
+                  title="No data in this period"
+                  description={emptyMessage}
+                />
               </td>
             </tr>
           ) : (
@@ -206,15 +132,6 @@ function DataTable({
   );
 }
 
-function formatGeneratedAt(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
 export function AnalyticsDashboard({
   data,
   customers,
@@ -224,7 +141,6 @@ export function AnalyticsDashboard({
 }: AnalyticsDashboardProps) {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState(data.filters.customerId);
   const refreshTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -234,11 +150,6 @@ export function AnalyticsDashboard({
       }
     };
   }, []);
-
-  const visibleProjects = useMemo(() => {
-    if (!selectedCustomer) return projects;
-    return projects.filter((project) => project.customer_id === selectedCustomer);
-  }, [projects, selectedCustomer]);
 
   useEffect(() => {
     function refreshIfVisible() {
@@ -266,318 +177,18 @@ export function AnalyticsDashboard({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-border bg-card shadow-sm">
-        <form
-          method="GET"
-          className="flex flex-col gap-3 border-b border-border px-6 py-4"
-        >
-          <input type="hidden" name="section" value={activeSection} />
-          <div className="grid flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="space-y-2">
-              <label htmlFor="range" className="text-sm font-medium">
-                Date range
-              </label>
-              <select
-                id="range"
-                name="range"
-                defaultValue={data.filters.dateRange}
-                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {ANALYTICS_DATE_RANGES.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="customer" className="text-sm font-medium">
-                Customer
-              </label>
-              <select
-                id="customer"
-                name="customer"
-                defaultValue={data.filters.customerId}
-                onChange={(event) => setSelectedCustomer(event.target.value)}
-                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                <option value="">All customers</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.company_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="project" className="text-sm font-medium">
-                Project
-              </label>
-              <select
-                id="project"
-                name="project"
-                defaultValue={data.filters.projectId}
-                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                <option value="">All projects</option>
-                {visibleProjects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.project_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="status" className="text-sm font-medium">
-                Project status
-              </label>
-              <select
-                id="status"
-                name="status"
-                defaultValue={data.filters.projectStatus}
-                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                <option value="">All statuses</option>
-                {PROJECT_STATUSES.filter((status) => status !== "Archived").map(
-                  (status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  )
-                )}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="submit">Apply filters</Button>
-            <Link
-              href={buildAnalyticsUrl({ section: activeSection })}
-              className={cn(
-                "inline-flex h-8 items-center justify-center rounded-lg border border-border px-3 text-sm font-medium transition-colors hover:bg-muted"
-              )}
-            >
-              Reset
-            </Link>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-8"
-              onClick={handleRefresh}
-            >
-              <RefreshCw
-                className={cn("mr-2 size-4", refreshing && "animate-spin")}
-              />
-              Refresh
-            </Button>
-            <a
-              href={buildAnalyticsExportUrl("csv", data.filters)}
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-3 text-sm font-medium transition-colors hover:bg-muted"
-            >
-              <Download className="mr-2 size-4" />
-              Export CSV
-            </a>
-            <a
-              href={buildAnalyticsExportUrl("pdf", data.filters)}
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-3 text-sm font-medium transition-colors hover:bg-muted"
-            >
-              <FileDown className="mr-2 size-4" />
-              Export PDF
-            </a>
-            <span className="text-xs text-muted-foreground">
-              Updated {formatGeneratedAt(data.generatedAt)} · auto-refresh every 60s
-            </span>
-          </div>
-        </form>
-
-        <div className="flex gap-1 overflow-x-auto px-4 py-3">
-          {ANALYTICS_SECTIONS.map((section) => (
-            <Link
-              key={section.value}
-              href={buildAnalyticsUrl({
-                range: data.filters.dateRange,
-                customer: data.filters.customerId,
-                project: data.filters.projectId,
-                status: data.filters.projectStatus,
-                section: section.value,
-              })}
-              className={cn(
-                "shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                activeSection === section.value
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              {section.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <AiOpportunitiesPanel opportunities={aiInsights.opportunities} />
-
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2">
-          <AiBusinessCoachCard coach={aiInsights.businessCoach} />
-        </div>
-        <div className="space-y-6 xl:col-span-1">
-          <RevenueForecastCard forecast={forecasts.revenue} />
-          <ProfitForecastCard forecast={forecasts.profit} />
-        </div>
-      </div>
+    <div className="space-y-8">
+      <AnalyticsFiltersBar
+        data={data}
+        customers={customers}
+        projects={projects}
+        activeSection={activeSection}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+      />
 
       {activeSection === "executive" ? (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              title="Revenue"
-              value={formatCurrency(data.executive.revenue)}
-              change="Accepted proposals"
-              changeType={data.executive.revenue > 0 ? "positive" : "neutral"}
-              icon={CircleDollarSign}
-            />
-            <StatCard
-              title="Gross profit"
-              value={formatCurrency(data.executive.grossProfit)}
-              change="From estimate margins"
-              icon={TrendingUp}
-            />
-            <StatCard
-              title="Gross margin"
-              value={formatPercent(data.executive.grossMarginPercent)}
-              changeType={
-                data.executive.grossMarginPercent >= 15 ? "positive" : "neutral"
-              }
-              icon={Percent}
-            />
-            <StatCard
-              title="Win rate"
-              value={formatPercent(data.executive.winRate)}
-              change={`${data.proposals.totalDecided} decided proposals`}
-              changeType={data.executive.winRate >= 40 ? "positive" : "neutral"}
-              icon={BarChart3}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              title="Total estimates"
-              value={String(data.executive.totalEstimates)}
-              icon={PencilLine}
-            />
-            <StatCard
-              title="Total proposals"
-              value={String(data.executive.totalProposals)}
-              icon={FileText}
-            />
-            <StatCard
-              title="Active projects"
-              value={String(data.executive.activeProjects)}
-              icon={FolderKanban}
-            />
-            <StatCard
-              title="Pipeline value"
-              value={formatCurrency(data.executive.pipelineValue)}
-              icon={CircleDollarSign}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              title="Avg estimate size"
-              value={formatCurrency(data.executive.averageEstimateSize)}
-              icon={PencilLine}
-            />
-            <StatCard
-              title="Avg project margin"
-              value={formatPercent(data.executive.averageProjectMargin)}
-              icon={Percent}
-            />
-            <StatCard
-              title="Avg estimate production"
-              value={`${data.executive.averageEstimateProductionHours.toFixed(1)}h`}
-              change="Creation to final update"
-              icon={PencilLine}
-            />
-            <StatCard
-              title="Avg proposal acceptance"
-              value={`${data.executive.averageProposalAcceptanceDays.toFixed(1)}d`}
-              change="Sent to accepted"
-              icon={Send}
-            />
-          </div>
-
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-            <div className="rounded-xl border border-border bg-card shadow-sm">
-              <div className="border-b border-border px-6 py-4">
-                <h2 className="text-base font-semibold">Recent activity</h2>
-                <p className="text-sm text-muted-foreground">
-                  Latest updates across customers, projects, estimates, and proposals.
-                </p>
-              </div>
-              <div className="divide-y divide-border/60">
-                {data.recentActivity.length === 0 ? (
-                  <p className="px-6 py-10 text-center text-sm text-muted-foreground">
-                    No activity in the selected period.
-                  </p>
-                ) : (
-                  data.recentActivity.map((item) => {
-                    const Icon = ACTIVITY_ICONS[item.type];
-
-                    return (
-                      <Link
-                        key={item.id}
-                        href={item.href}
-                        className="flex items-start gap-3 px-6 py-4 transition-colors hover:bg-muted/20"
-                      >
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <Icon className="size-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium">{item.action}</p>
-                          <p className="truncate text-sm text-foreground">{item.title}</p>
-                          <p className="text-xs text-muted-foreground">{item.subtitle}</p>
-                        </div>
-                        <span className="shrink-0 text-xs text-muted-foreground">
-                          <RelativeTime value={item.timestamp} />
-                        </span>
-                      </Link>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border bg-card shadow-sm">
-              <div className="border-b border-border px-6 py-4">
-                <h2 className="text-base font-semibold">Recent estimates</h2>
-                <p className="text-sm text-muted-foreground">
-                  Drill down into the latest estimates in your portfolio.
-                </p>
-              </div>
-              <DataTable
-                headers={["Estimate", "Total", "Margin"]}
-                rows={data.recentEstimates.map((estimate) => [
-                  <div key={estimate.id}>
-                    <DrillDownLink href={`/estimates/${estimate.id}`}>
-                      {estimate.title}
-                    </DrillDownLink>
-                    <p className="text-xs text-muted-foreground">{estimate.projectName}</p>
-                  </div>,
-                  <span key="total" className="font-medium tabular-nums">
-                    {formatCurrency(estimate.grandTotal)}
-                  </span>,
-                  formatPercent(estimate.profitMarginPercent),
-                ])}
-                emptyMessage="No estimates in the selected period."
-              />
-            </div>
-          </div>
-        </>
+        <AnalyticsExecutiveOverview data={data} precomputed={precomputed} />
       ) : null}
 
       {activeSection === "estimating" ? (
@@ -965,6 +576,22 @@ export function AnalyticsDashboard({
 
       {activeSection === "ai" ? (
         <>
+          <AnalyticsAiSummary
+            data={data}
+            analytics={analytics}
+            aiInsights={aiInsights}
+          />
+
+          <div className="grid gap-6 xl:grid-cols-3">
+            <div className="xl:col-span-2">
+              <AiBusinessCoachCard coach={aiInsights.businessCoach} />
+            </div>
+            <div className="space-y-6 xl:col-span-1">
+              <RevenueForecastCard forecast={forecasts.revenue} />
+              <ProfitForecastCard forecast={forecasts.profit} />
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               title="AI-assisted estimates"

@@ -75,7 +75,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     <>
       <DashboardTopNav title="Analytics" />
       <PageMain>
-        <PageIntro description="Measure estimating performance, profitability, and business growth with real-time KPIs, interactive charts, and exportable reports." />
+        <PageIntro description="Premium analytics for electrical contractors — KPIs, trends, AI insights, and exportable reports in one dashboard." />
 
         {loadError ? (
           <AlertBanner variant="error" title="Unable to load analytics">
