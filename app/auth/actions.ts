@@ -8,9 +8,10 @@ import { friendlyAuthError } from "@/lib/auth/user-messages";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { persistOrganizationPreference } from "@/lib/teams/actions";
 import { createClient } from "@/lib/supabase/server";
+import { getSiteUrl } from "@/lib/site-url";
 
-function getSiteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000";
+function getAuthSiteUrl() {
+  return getSiteUrl();
 }
 
 export async function requestPasswordReset(formData: FormData) {
@@ -24,7 +25,7 @@ export async function requestPasswordReset(formData: FormData) {
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${getSiteUrl()}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
+    redirectTo: `${getAuthSiteUrl()}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
   });
 
   if (error) {
@@ -87,7 +88,7 @@ export async function signUp(formData: FormData) {
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
 
-  const email = String(formData.get("email") ?? "");
+  const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
   const { error } = await supabase.auth.signInWithPassword({

@@ -37,6 +37,7 @@ import {
 import { getProposalWorkflowSnapshot } from "@/lib/proposals/proposal-workflow-service";
 import { getEstimateById } from "@/lib/estimates/queries";
 import { createClient } from "@/lib/supabase/server";
+import { getSiteUrl } from "@/lib/site-url";
 import type { ProposalEditorState } from "@/lib/proposals/types";
 
 type SaveOptions = {
@@ -82,10 +83,6 @@ async function generateProposalNumber(organizationId: string) {
 
   const sequence = (count ?? 0) + 1;
   return `PROP-${year}-${String(sequence).padStart(4, "0")}`;
-}
-
-function getSiteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000";
 }
 
 async function assertProposalEditable(proposalId: string, organizationId: string) {

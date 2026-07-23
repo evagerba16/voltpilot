@@ -118,6 +118,20 @@ export async function respondToCustomerProposal(input: {
     return { error: portalLoadError() };
   }
 
+  if (!proposal) {
+    return { error: portalLoadError() };
+  }
+
+  if (proposal.status === "Draft") {
+    return {
+      error: "This proposal is not available for response yet.",
+    };
+  }
+
+  if (!["Sent", "Viewed"].includes(proposal.status)) {
+    return { error: "This proposal is no longer open for response." };
+  }
+
   let result;
 
   try {

@@ -3,6 +3,7 @@ import "server-only";
 import { sendProposalNotificationEmail } from "@/lib/email/proposal-notifications";
 import { formatCurrency } from "@/lib/proposals/format";
 import type { ProposalPortalData } from "@/lib/proposals/types";
+import { getSiteUrl } from "@/lib/site-url";
 
 export type ProposalNotificationEvent =
   | "viewed"
@@ -18,10 +19,6 @@ type ProposalNotificationContext = {
 
 function getContractorEmail(proposal: ProposalPortalData) {
   return proposal.company_snapshot?.email?.trim() ?? null;
-}
-
-function getSiteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000";
 }
 
 function buildNotificationCopy(

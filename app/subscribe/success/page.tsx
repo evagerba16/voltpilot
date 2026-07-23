@@ -13,18 +13,22 @@ type SubscribeSuccessPageProps = {
 };
 
 async function getCompletedCheckoutRecord(stripeCheckoutSessionId: string) {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("stripe_checkout_sessions")
-    .select("*")
-    .eq("stripe_checkout_session_id", stripeCheckoutSessionId)
-    .maybeSingle();
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("stripe_checkout_sessions")
+      .select("*")
+      .eq("stripe_checkout_session_id", stripeCheckoutSessionId)
+      .maybeSingle();
 
-  if (error) {
+    if (error) {
+      return null;
+    }
+
+    return (data as StripeCheckoutSessionRecord | null) ?? null;
+  } catch {
     return null;
   }
-
-  return (data as StripeCheckoutSessionRecord | null) ?? null;
 }
 
 export default async function SubscribeSuccessPage({
@@ -34,12 +38,32 @@ export default async function SubscribeSuccessPage({
   const sessionId = params.session_id?.trim();
   const stripe = getStripeClient();
 
-  let title = "Payment received";
+  let title = "Checkout confirmation required";
   let message =
-    "We are setting up your account. Check your email for a link to set your password, then sign in.";
+    "Return to subscribe and complete checkout, or contact support if you already paid.";
   let isReady = false;
 
-  if (sessionId && stripe) {
+  if (!sessionId) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-muted/30 p-6">
+        <SuccessShell title={title} message={message} isReady={isReady} />
+      </main>
+    );
+  }
+
+  if (!stripe) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-muted/30 p-6">
+        <SuccessShell
+          title="Billing unavailable"
+          message="We could not verify your checkout session. Contact support with your payment confirmation."
+          isReady={false}
+        />
+      </main>
+    );
+  }
+
+  try {
     const checkout = await stripe.checkout.sessions.retrieve(sessionId);
     const record = await getCompletedCheckoutRecord(sessionId);
 
@@ -49,16 +73,38 @@ export default async function SubscribeSuccessPage({
       message =
         "Your account and organization are ready. Check your email for a password setup link, then sign in to VoltPilot.";
     } else if (checkout.payment_status === "paid") {
+      title = "Payment received";
       message =
         "Payment succeeded. Your account is being provisioned — refresh this page in a moment or check your email.";
     } else {
       title = "Payment pending";
-      message = "Your payment has not completed yet. Return to checkout if you need to try again.";
+      message =
+        "Your payment has not completed yet. Return to checkout if you need to try again.";
     }
+  } catch {
+    title = "Unable to verify checkout";
+    message =
+      "We couldn't confirm this checkout session. Contact support with your payment confirmation.";
   }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-muted/30 p-6">
+      <SuccessShell title={title} message={message} isReady={isReady} />
+    </main>
+  );
+}
+
+function SuccessShell({
+  title,
+  message,
+  isReady,
+}: {
+  title: string;
+  message: string;
+  isReady: boolean;
+}) {
+  return (
+    <>
       <Link
         href="/"
         className="mb-8 flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -93,6 +139,6 @@ export default async function SubscribeSuccessPage({
           </Link>
         </div>
       </div>
-    </main>
+    </>
   );
 }

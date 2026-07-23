@@ -48,7 +48,7 @@ export function CustomerProposalView({
     license_number: null,
   };
 
-  const canRespond = !["Accepted", "Declined", "Expired"].includes(proposal.status);
+  const canRespond = ["Sent", "Viewed"].includes(proposal.status);
   const statusLabel = CUSTOMER_PROPOSAL_STATUS_LABELS[proposal.status];
 
   async function refreshProposal() {
@@ -196,6 +196,13 @@ export function CustomerProposalView({
                 </div>
               ))}
             </div>
+          </section>
+        ) : null}
+
+        {proposal.status === "Draft" ? (
+          <section className="rounded-2xl border border-dashed border-border bg-muted/20 p-5 text-sm text-muted-foreground sm:p-6">
+            This proposal has not been sent yet. Contact your contractor if you
+            believe you received this link in error.
           </section>
         ) : null}
 

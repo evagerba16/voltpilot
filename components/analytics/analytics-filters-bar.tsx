@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CalendarRange,
-  Download,
-  FileDown,
   Filter,
   RefreshCw,
 } from "lucide-react";
 
+import { AnalyticsExportButtons } from "@/components/analytics/analytics-export-buttons";
 import { Button } from "@/components/ui/button";
 import {
   ANALYTICS_DATE_RANGES,
@@ -20,7 +19,6 @@ import {
   type ProjectFilterOption,
 } from "@/lib/analytics/types";
 import {
-  buildAnalyticsExportUrl,
   buildAnalyticsUrl,
 } from "@/lib/analytics/url";
 import { PROJECT_STATUSES } from "@/lib/projects/types";
@@ -55,10 +53,25 @@ export function AnalyticsFiltersBar({
   const [selectedCustomer, setSelectedCustomer] = useState(
     data.filters.customerId
   );
+  const [selectedProject, setSelectedProject] = useState(data.filters.projectId);
 
   const visibleProjects = selectedCustomer
     ? projects.filter((project) => project.customer_id === selectedCustomer)
     : projects;
+
+  useEffect(() => {
+    if (!selectedProject) {
+      return;
+    }
+
+    const matchesCustomer = visibleProjects.some(
+      (project) => project.id === selectedProject
+    );
+
+    if (!matchesCustomer) {
+      setSelectedProject("");
+    }
+  }, [selectedProject, visibleProjects]);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -80,7 +93,7 @@ export function AnalyticsFiltersBar({
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <CalendarRange className="size-3.5 shrink-0" />
             <span>
-              Updated {formatGeneratedAt(data.generatedAt)} · auto-refresh 60s
+              Updated {formatGeneratedAt(data.generatedAt)} · use Refresh to update
             </span>
           </div>
         </div>
@@ -134,7 +147,8 @@ export function AnalyticsFiltersBar({
             <select
               id="project"
               name="project"
-              defaultValue={data.filters.projectId}
+              value={selectedProject}
+              onChange={(event) => setSelectedProject(event.target.value)}
               className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <option value="">All projects</option>
@@ -182,20 +196,7 @@ export function AnalyticsFiltersBar({
             />
             Refresh
           </Button>
-          <a
-            href={buildAnalyticsExportUrl("csv", data.filters)}
-            className="inline-flex h-9 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium transition-colors hover:bg-muted"
-          >
-            <Download className="mr-2 size-4" />
-            Export CSV
-          </a>
-          <a
-            href={buildAnalyticsExportUrl("pdf", data.filters)}
-            className="inline-flex h-9 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium transition-colors hover:bg-muted"
-          >
-            <FileDown className="mr-2 size-4" />
-            Export PDF
-          </a>
+          <AnalyticsExportButtons filters={data.filters} />
         </div>
       </form>
 

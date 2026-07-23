@@ -9,6 +9,7 @@ import {
   provisionAccountFromCheckoutSession,
   subscriptionFromStripe,
 } from "@/lib/billing/provision-account";
+import { sendWelcomeEmail } from "@/lib/email/send-welcome";
 import { getStripeClient } from "@/lib/stripe/client";
 import { getStripeEnv } from "@/lib/stripe/env";
 
@@ -45,7 +46,21 @@ export async function POST(request: Request) {
         const session = event.data.object as Stripe.Checkout.Session;
 
         if (session.mode === "subscription") {
-          await provisionAccountFromCheckoutSession(session);
+          const provisioned = await provisionAccountFromCheckoutSession(session);
+
+          if (provisioned.passwordSetupUrl) {
+            const emailResult = await sendWelcomeEmail({
+              to: provisioned.email,
+              passwordSetupUrl: provisioned.passwordSetupUrl,
+            });
+
+            if (!emailResult.sent) {
+              throw new Error(
+                emailResult.message ??
+                  "Account provisioned but welcome email could not be sent."
+              );
+            }
+          }
         }
 
         break;

@@ -11,6 +11,9 @@ import {
   rateLimitResponse,
 } from "@/lib/security/rate-limit";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 export async function GET(request: Request) {
   try {
     const context = await assertApiPermission("analytics.view");

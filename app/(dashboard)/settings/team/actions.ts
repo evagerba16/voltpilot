@@ -16,10 +16,7 @@ import {
   type TeamRole,
 } from "@/lib/teams/types";
 import { createClient } from "@/lib/supabase/server";
-
-function getSiteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-}
+import { getSiteUrl } from "@/lib/site-url";
 
 function isValidInvitableRole(role: string): role is InvitableRole {
   return INVITABLE_ROLES.includes(role as InvitableRole);

@@ -8,7 +8,7 @@ import { getSubscribePlanDetails } from "@/lib/billing/plan";
 import { cn } from "@/lib/utils";
 
 type SubscribePageProps = {
-  searchParams: Promise<{ canceled?: string }>;
+  searchParams: Promise<{ canceled?: string; error?: string }>;
 };
 
 const included = [
@@ -34,6 +34,12 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
           </span>
           VoltPilot
         </Link>
+
+        {params.error ? (
+          <AlertBanner variant="info" title="Account creation moved" className="mb-6">
+            {params.error}
+          </AlertBanner>
+        ) : null}
 
         {params.canceled ? (
           <AlertBanner variant="info" title="Checkout canceled" className="mb-6">

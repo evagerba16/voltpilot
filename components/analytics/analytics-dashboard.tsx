@@ -151,17 +151,6 @@ export function AnalyticsDashboard({
     };
   }, []);
 
-  useEffect(() => {
-    function refreshIfVisible() {
-      if (document.visibilityState === "visible") {
-        router.refresh();
-      }
-    }
-
-    const intervalId = window.setInterval(refreshIfVisible, 60_000);
-    return () => window.clearInterval(intervalId);
-  }, [router]);
-
   const { analytics, forecasts, aiInsights, pipelineWithColor } = precomputed;
 
   const handleRefresh = () => {

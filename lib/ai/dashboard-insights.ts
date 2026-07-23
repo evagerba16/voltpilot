@@ -275,7 +275,7 @@ export async function getDashboardInsights(
 
   try {
     const { model } = getOpenAIConfig();
-    const completion = await client.chat.completions.create({
+    const completionPromise = client.chat.completions.create({
       model,
       temperature: 0.2,
       response_format: { type: "json_object" },
@@ -306,6 +306,13 @@ Return JSON: { "summary": "...", "actions": ["...", "..."] }`,
         },
       ],
     });
+
+    const completion = await Promise.race([
+      completionPromise,
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("OpenAI summary timed out")), 2500);
+      }),
+    ]);
 
     const content = completion.choices[0]?.message?.content ?? "";
     const parsed = parseJsonResponse<AiSummaryPayload>(content);

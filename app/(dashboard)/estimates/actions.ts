@@ -127,6 +127,24 @@ async function persistEstimate(
     return { error: "This estimate could not be found." };
   }
 
+  const supabase = await createClient();
+  const { data: existingEstimate, error: statusError } = await supabase
+    .from("estimates")
+    .select("status")
+    .eq("id", estimateId)
+    .eq("organization_id", context.organizationId)
+    .maybeSingle();
+
+  if (statusError) {
+    return { error: "We couldn't save this estimate. Try again in a moment." };
+  }
+
+  if (existingEstimate?.status === "Final") {
+    return {
+      error: "This estimate is final. Reopen it before making changes.",
+    };
+  }
+
   const input = parseBuilderState(payload);
 
   if (!input.title) {
@@ -141,7 +159,6 @@ async function persistEstimate(
     input.tax_percent
   );
 
-  const supabase = await createClient();
   const sellingPrice = roundCurrency(totals.finalSellingPrice);
 
   const estimateUpdate = {

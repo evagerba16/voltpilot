@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { DashboardTopNav } from "@/components/dashboard/top-nav";
 import { PageIntro, PageMain } from "@/components/dashboard/page-main";
 import { CompanySettingsForm } from "@/components/settings/company-settings-form";
@@ -10,7 +12,11 @@ export default async function SettingsPage() {
   const context = await getTeamContext();
 
   if (!context) {
-    return null;
+    redirect("/login?next=/settings");
+  }
+
+  if (!hasPermission(context.permissions, "settings.company.view")) {
+    redirect("/dashboard");
   }
 
   const settings = await getCompanySettings(context.organizationId);

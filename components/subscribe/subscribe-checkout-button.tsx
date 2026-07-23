@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { createCheckoutSession } from "@/app/subscribe/actions";
 import { Button } from "@/components/ui/button";
@@ -16,27 +16,40 @@ export function SubscribeCheckoutButton({
   className,
 }: SubscribeCheckoutButtonProps) {
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   return (
-    <Button
-      type="button"
-      size="lg"
-      className={className}
-      disabled={pending}
-      onClick={() => {
-        startTransition(async () => {
-          await createCheckoutSession();
-        });
-      }}
-    >
-      {pending ? (
-        <>
-          <Loader2 className="size-4 animate-spin" data-icon="inline-start" />
-          Redirecting to checkout...
-        </>
-      ) : (
-        label
-      )}
-    </Button>
+    <div className="space-y-3">
+      <Button
+        type="button"
+        size="lg"
+        className={className}
+        disabled={pending}
+        onClick={() => {
+          setError(null);
+          startTransition(async () => {
+            const result = await createCheckoutSession();
+
+            if (result?.error) {
+              setError(result.error);
+            }
+          });
+        }}
+      >
+        {pending ? (
+          <>
+            <Loader2 className="size-4 animate-spin" data-icon="inline-start" />
+            Redirecting to checkout...
+          </>
+        ) : (
+          label
+        )}
+      </Button>
+      {error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }

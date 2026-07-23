@@ -6,9 +6,7 @@ import { getOrganizationSubscription } from "@/lib/billing/queries";
 import { assertPermission } from "@/lib/auth/get-team-context";
 import { getStripeClient } from "@/lib/stripe/client";
 
-function getSiteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000";
-}
+import { getSiteUrl } from "@/lib/site-url";
 
 export async function createBillingPortalSession() {
   const context = await assertPermission("settings.billing.manage");

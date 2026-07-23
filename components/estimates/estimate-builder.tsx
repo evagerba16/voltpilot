@@ -147,8 +147,12 @@ export function EstimateBuilder({
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSavingRef = useRef(false);
   const selectedLineIdsRef = useRef(selectedLineIds);
+  const reviewResultRef = useRef(reviewResult);
 
   selectedLineIdsRef.current = selectedLineIds;
+  reviewResultRef.current = reviewResult;
+
+  const isLocked = status === "Final";
 
   const totals = useMemo(
     () =>
@@ -430,6 +434,12 @@ export function EstimateBuilder({
   }, [estimateId]);
 
   const handleSave = useCallback(() => {
+    if (isLocked) {
+      setError("This estimate is final. Reopen it before making changes.");
+      setSaveStatus("error");
+      return;
+    }
+
     setError(null);
 
     startTransition(async () => {
@@ -447,7 +457,7 @@ export function EstimateBuilder({
       setSaveStatus("saved");
       await refreshVersions();
     });
-  }, [estimateId, state, refreshVersions]);
+  }, [estimateId, isLocked, state, refreshVersions]);
 
   useKeyboardShortcut({ key: "s", metaOrCtrl: true }, handleSave);
   useKeyboardShortcut({ key: "Escape" }, clearLineSelection);
@@ -498,7 +508,7 @@ export function EstimateBuilder({
 
   const runAutosave = useCallback(
     async (currentState: EstimateBuilderState) => {
-      if (isSavingRef.current) {
+      if (isLocked || isSavingRef.current) {
         return;
       }
 
@@ -516,6 +526,7 @@ export function EstimateBuilder({
       isSavingRef.current = false;
 
       if (result.error) {
+        setError(result.error);
         setSaveStatus("error");
         return;
       }
@@ -524,10 +535,14 @@ export function EstimateBuilder({
       setSavedAt(result.savedAt ?? new Date().toISOString());
       setSaveStatus("saved");
     },
-    [estimateId]
+    [estimateId, isLocked]
   );
 
   useEffect(() => {
+    if (isLocked) {
+      return;
+    }
+
     const serialized = serializeState(state);
 
     if (serialized === lastSavedStateRef.current) {
@@ -547,9 +562,10 @@ export function EstimateBuilder({
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [state, runAutosave]);
+  }, [isLocked, state, runAutosave]);
 
   async function runReview() {
+    const previousReview = reviewResultRef.current;
     setReviewLoading(true);
     setReviewError(null);
     setReviewResult(null);
@@ -567,7 +583,7 @@ export function EstimateBuilder({
             projectAddress: project.project_address,
             projectType: project.project_type ?? "Commercial electrical",
           },
-          previousRecommendations: reviewResult?.recommendations.map((item) => ({
+          previousRecommendations: previousReview?.recommendations.map((item) => ({
             id: item.id,
             title: item.title,
             category: item.category,
@@ -925,6 +941,7 @@ export function EstimateBuilder({
               <input
                 id="estimate-title"
                 value={state.title}
+                disabled={isLocked}
                 onChange={(event) => {
                   setState((current) => ({
                     ...current,

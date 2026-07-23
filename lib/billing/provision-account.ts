@@ -9,6 +9,7 @@ import {
 } from "@/lib/billing/admin-queries";
 import type { SubscriptionStatus } from "@/lib/billing/types";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getSiteUrl } from "@/lib/site-url";
 
 function mapStripeSubscriptionStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
   switch (status) {
@@ -70,7 +71,7 @@ export async function provisionAccountFromCheckoutSession(
     throw new Error("Checkout session is missing a customer email.");
   }
 
-  if (session.payment_status !== "paid" && session.status !== "complete") {
+  if (session.payment_status !== "paid") {
     throw new Error("Checkout session is not paid.");
   }
 
@@ -114,7 +115,7 @@ export async function provisionAccountFromCheckoutSession(
       type: "recovery",
       email,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/login`,
+        redirectTo: `${getSiteUrl()}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
       },
     });
 

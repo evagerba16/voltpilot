@@ -29,7 +29,7 @@ export default async function DashboardLayout({
 
       if (denial === "deactivated") {
         redirect(
-          `/login?error=${encodeURIComponent("Your account has been deactivated. Contact your organization admin.")}`
+          `/auth/terminal?error=${encodeURIComponent("Your account has been deactivated. Contact your organization admin.")}`
         );
       }
 
@@ -48,7 +48,7 @@ export default async function DashboardLayout({
     }
 
     redirect(
-      `/login?error=${encodeURIComponent("Your organization subscription is inactive. Contact your account owner.")}`
+      `/auth/terminal?error=${encodeURIComponent("Your organization subscription is inactive. Contact your account owner.")}`
     );
   }
 
