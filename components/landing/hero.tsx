@@ -23,15 +23,14 @@ export function Hero() {
             Built for Residential &amp; Commercial Electrical Contractors
           </p>
 
-          <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Proposal &amp; Estimating Software for Residential &amp; Commercial
-            Electrical Contractors
+          <h1 className="mx-auto max-w-2xl text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem] lg:leading-tight">
+            AI Proposal &amp; Estimating Software for Electrical Contractors
           </h1>
 
-          <p className="mt-6 text-lg leading-relaxed text-muted-foreground sm:text-xl">
+          <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-muted-foreground sm:text-xl">
             Create accurate estimates, professional proposals, and win more
-            profitable jobs — with AI-assisted workflows built for residential
-            and commercial electrical contractors.
+            profitable jobs with AI-assisted workflows built for residential and
+            commercial electrical contractors.
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
