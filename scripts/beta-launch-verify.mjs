@@ -90,7 +90,7 @@ async function probeApiRoutes(baseUrl) {
         `api:${route.path}`,
         `${route.path} reachable`,
         `cannot connect to ${baseUrl}`,
-        "Run: NEXT_DIST_DIR=.next-build npm run start -- -p 3000"
+        "Run: npm run build:local && npm run start:local -- -p 3000"
       );
     }
   }

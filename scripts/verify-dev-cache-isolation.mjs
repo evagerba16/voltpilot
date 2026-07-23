@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Regression guard: dev and production build caches must stay separate.
- * Run: node scripts/verify-dev-cache-isolation.mjs
+ * Regression guard: default builds use .next; optional local builds use .next-build.
+ * Run: npm run dev:verify-cache
  */
 
 import fs from "node:fs";
@@ -15,18 +15,20 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"))
 
 const failures = [];
 
-if (!config.includes('process.env.VERCEL === "1"') || !config.includes(".next-build")) {
-  failures.push(
-    "next.config.ts must use .next-build locally and .next when VERCEL=1"
-  );
+if (config.includes('distDir: process.env.NEXT_DIST_DIR ?? ".next-build"')) {
+  failures.push("next.config.ts must not default distDir to .next-build");
 }
 
-if (!pkg.scripts.dev.includes("NEXT_DIST_DIR=.next")) {
-  failures.push('package.json "dev" must set NEXT_DIST_DIR=.next');
+if (config.includes("VERCEL === \"1\"")) {
+  failures.push("next.config.ts must not rely on VERCEL env detection for distDir");
 }
 
-if (!pkg.scripts.prebuild?.includes("prebuild-guard")) {
-  failures.push('package.json "prebuild" must run scripts/prebuild-guard.mjs');
+if (!pkg.scripts["build:local"]?.includes("VOLTPILOT_DIST_DIR=.next-build")) {
+  failures.push('package.json "build:local" must set VOLTPILOT_DIST_DIR=.next-build');
+}
+
+if (pkg.scripts.prebuild?.includes("prebuild-guard")) {
+  failures.push('package.json must not run prebuild-guard (blocks standard .next builds)');
 }
 
 if (failures.length > 0) {
@@ -37,6 +39,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(
-  "OK: dev (.next), local build (.next-build), and Vercel build (.next) are configured."
-);
+console.log("OK: default build uses .next; build:local uses .next-build.");
