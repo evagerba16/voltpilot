@@ -55,8 +55,9 @@ export function WhyVoltPilot() {
             Why Contractors Choose VoltPilot
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Purpose-built tools for commercial electrical contractors — from
-            first estimate to signed proposal.
+            Purpose-built tools for residential and commercial electrical
+            contractors — from first estimate to signed proposal and profitable
+            job.
           </p>
         </div>
 

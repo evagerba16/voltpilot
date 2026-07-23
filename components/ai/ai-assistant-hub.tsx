@@ -49,9 +49,10 @@ export function AiAssistantHub() {
             <div>
               <h2 className="text-lg font-semibold">VoltPilot AI Assistant</h2>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Intelligent estimating and proposal assistance for commercial
-                electrical contractors. AI provides recommendations only — your
-                estimates and proposals are never modified without approval.
+                Intelligent estimating and proposal assistance for residential
+                and commercial electrical contractors. AI provides
+                recommendations only — your estimates and proposals are never
+                modified without approval.
               </p>
             </div>
           </div>

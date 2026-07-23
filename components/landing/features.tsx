@@ -36,7 +36,7 @@ const features = [
     icon: BarChart3,
     title: "Pipeline analytics",
     description:
-      "Track revenue, profit, forecasts, and proposal performance from a dashboard built for contractor workflows.",
+      "Track revenue, profit, forecasts, and proposal performance from a dashboard built for residential and commercial contractor workflows.",
   },
   {
     icon: Users,
@@ -55,8 +55,9 @@ export function Features() {
             Everything You Need to Estimate with Confidence
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Purpose-built for commercial electrical contractors — from customer
-            and project setup through estimate, proposal, and signed job.
+            Purpose-built for residential and commercial electrical contractors
+            — from customer and project setup through estimate, proposal, and
+            signed job.
           </p>
         </div>
 

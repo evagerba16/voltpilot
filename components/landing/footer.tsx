@@ -26,8 +26,8 @@ export function Footer() {
               VoltPilot
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Estimating and proposal software built for commercial electrical
-              contractors. Subscribe to get started.
+              Estimating and proposal software built for residential and
+              commercial electrical contractors. Subscribe to get started.
             </p>
           </div>
 

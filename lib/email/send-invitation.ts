@@ -34,7 +34,7 @@ export async function sendInvitationEmail(input: SendInvitationEmailInput) {
         <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #111827;">
           <h2>Join ${input.organizationName} on VoltPilot</h2>
           <p>${input.inviterEmail} invited you to collaborate as <strong>${input.roleLabel}</strong>.</p>
-          <p>VoltPilot helps commercial electrical contractors manage estimates, proposals, and project pipelines.</p>
+          <p>VoltPilot helps residential and commercial electrical contractors create accurate estimates, professional proposals, and win more profitable jobs.</p>
           <p>
             <a href="${input.inviteUrl}" style="display:inline-block;padding:12px 18px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;">
               Accept invitation

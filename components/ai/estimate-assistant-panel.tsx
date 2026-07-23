@@ -501,7 +501,7 @@ export function EstimateAssistantPanel({
           {messages.length === 0 && !loadingHistory ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Tell the AI about the commercial electrical scope. It will suggest
+                Tell the AI about the electrical project scope. It will suggest
                 labor hours, materials, equipment, quantities, and markup percentages
                 with reasoning for each recommendation.
               </p>

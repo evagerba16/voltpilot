@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 const highlights = [
   "Accurate Project Estimates",
   "Professional Proposal Generation",
-  "AI-Assisted Estimate Review",
+  "More Profitable Jobs Won",
 ];
 
 export function Hero() {
@@ -20,18 +20,18 @@ export function Hero() {
       <div className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
         <div className="mx-auto max-w-3xl text-center">
           <p className="mb-4 inline-flex items-center rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground">
-            Built for Commercial Electrical Contractors
+            Built for Residential &amp; Commercial Electrical Contractors
           </p>
 
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Proposal &amp; Estimating Software for Commercial Electrical
-            Contractors
+            Proposal &amp; Estimating Software for Residential &amp; Commercial
+            Electrical Contractors
           </h1>
 
           <p className="mt-6 text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            Reduce manual work, improve estimating accuracy, simplify proposal
-            creation, and protect project profitability with AI-assisted
-            workflows.
+            Create accurate estimates, professional proposals, and win more
+            profitable jobs — with AI-assisted workflows built for residential
+            and commercial electrical contractors.
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">

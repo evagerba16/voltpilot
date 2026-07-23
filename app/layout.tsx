@@ -14,9 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VoltPilot — AI Estimating & Bidding for Electrical Contractors",
+  title:
+    "VoltPilot — Estimating & Proposals for Residential & Commercial Electrical Contractors",
   description:
-    "AI-powered estimating and bidding platform built for commercial electrical contractors. Create accurate estimates, competitive bids, and professional proposals faster.",
+    "Estimating and proposal software built for residential and commercial electrical contractors. Create accurate estimates, professional proposals, and win more profitable jobs.",
 };
 
 export default function RootLayout({

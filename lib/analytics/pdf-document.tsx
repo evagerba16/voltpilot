@@ -161,7 +161,7 @@ export function AnalyticsPdfDocument({ data }: AnalyticsPdfDocumentProps) {
         />
 
         <View style={styles.footer} fixed>
-          <Text>VoltPilot AI · Commercial Electrical Analytics</Text>
+          <Text>VoltPilot · Residential & Commercial Electrical Analytics</Text>
           <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
       </Page>

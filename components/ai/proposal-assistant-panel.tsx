@@ -52,7 +52,7 @@ const TASKS: Array<{ task: ProposalAssistantTask; label: string; description: st
   {
     task: "exclusions",
     label: "Generate exclusions",
-    description: "Standard commercial exclusions",
+    description: "Standard electrical exclusions",
   },
   {
     task: "assumptions",

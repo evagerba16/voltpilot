@@ -122,7 +122,7 @@ function checkMissingMaterials(
         "missing_materials",
         "warning",
         "Materials appear low relative to labor",
-        `Materials are ${((totals.categoryTotals.materials / totals.categoryTotals.labor) * 100).toFixed(0)}% of labor cost. Commercial electrical estimates often run closer to 25–60% depending on scope.`
+        `Materials are ${((totals.categoryTotals.materials / totals.categoryTotals.labor) * 100).toFixed(0)}% of labor cost. Electrical estimates often run closer to 25–60% depending on scope.`
       )
     );
   }
@@ -407,7 +407,7 @@ function checkLowMargins(state: EstimateBuilderState, totals: ReturnType<typeof 
         "low_margin",
         "warning",
         "Profit margin is below typical targets",
-        `${state.profit_margin_percent}% profit margin is lean for commercial electrical work. Many contractors target 10–18% depending on risk.`
+        `${state.profit_margin_percent}% profit margin is lean for electrical contracting work. Many contractors target 10–18% depending on risk.`
       )
     );
   }
