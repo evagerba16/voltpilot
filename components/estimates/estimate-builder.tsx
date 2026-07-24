@@ -26,9 +26,11 @@ import {
 import {
   EstimateAssistantButton,
 } from "@/components/ai/estimate-assistant-panel";
-import { AssemblyPicker } from "@/components/estimates/assembly-picker";
+import { AiEstimateReviewCard } from "@/components/estimates/ai-estimate-review-card";
+import { AssembliesLibraryPanel } from "@/components/estimates/assemblies-library-panel";
 import { BulkActionsToolbar } from "@/components/estimates/bulk-actions-toolbar";
 import { EstimateSection } from "@/components/estimates/estimate-section";
+import type { LineItemPickerSelection } from "@/components/estimates/line-item-picker";
 import {
   EstimateTemplatesButton,
   EstimateTemplatesDialog,
@@ -46,6 +48,8 @@ import {
   buildLineItemsFromAssembly,
   type EstimateAssembly,
 } from "@/lib/estimates/assemblies";
+import { recordAssemblyUse } from "@/lib/estimates/assembly-catalogs/recents";
+import { recordLineItemUse } from "@/lib/estimates/line-item-catalogs/recents";
 import {
   calculateEstimateTotals,
   formatCurrency,
@@ -73,6 +77,7 @@ import {
   type EstimateVersion,
   type EstimateWithProject,
 } from "@/lib/estimates/types";
+import { normalizeUnitForCategory } from "@/lib/estimates/units";
 
 const AIReviewPanel = dynamic(
   () =>
@@ -154,6 +159,21 @@ export function EstimateBuilder({
 
   const isLocked = status === "Final";
 
+  const reviewContext = useMemo(
+    () => ({
+      projectName: project.project_name,
+      customerName: project.customer.company_name,
+      projectAddress: project.project_address,
+      projectType: project.project_type ?? "Commercial electrical",
+    }),
+    [
+      project.project_name,
+      project.customer.company_name,
+      project.project_address,
+      project.project_type,
+    ]
+  );
+
   const totals = useMemo(
     () =>
       calculateEstimateTotals(
@@ -208,6 +228,53 @@ export function EstimateBuilder({
             ...item,
             [field]: value,
           };
+        }),
+      }));
+      markDirty();
+    },
+    [markDirty]
+  );
+
+  const applyPickerSelection = useCallback(
+    (
+      localId: string,
+      selection: LineItemPickerSelection,
+      currentItem: EstimateLineItemInput,
+      category: EstimateCategory
+    ) => {
+      setState((current) => ({
+        ...current,
+        line_items: current.line_items.map((item, index) => {
+          if (getLineItemLocalId(item, index) !== localId) {
+            return item;
+          }
+
+          const nextItem = {
+            ...item,
+            description: selection.description,
+          };
+
+          if (selection.defaultUnit) {
+            nextItem.unit = normalizeUnitForCategory(category, selection.defaultUnit);
+          }
+
+          if (
+            selection.defaultUnitCost != null &&
+            selection.defaultUnitCost > 0 &&
+            currentItem.unit_cost === 0
+          ) {
+            nextItem.unit_cost = selection.defaultUnitCost;
+          }
+
+          if (
+            selection.defaultUnitCost != null &&
+            selection.defaultUnitCost > 0 &&
+            currentItem.quantity === 0
+          ) {
+            nextItem.quantity = 1;
+          }
+
+          return nextItem;
         }),
       }));
       markDirty();
@@ -423,6 +490,12 @@ export function EstimateBuilder({
       ]),
     }));
     markDirty();
+    recordAssemblyUse(assembly.id);
+    for (const item of assembly.items) {
+      if (item.category !== "miscellaneous") {
+        recordLineItemUse(item.category, item.description);
+      }
+    }
   }
 
   const refreshVersions = useCallback(async () => {
@@ -577,12 +650,7 @@ export function EstimateBuilder({
         body: JSON.stringify({
           estimateId,
           state,
-          context: {
-            projectName: project.project_name,
-            customerName: project.customer.company_name,
-            projectAddress: project.project_address,
-            projectType: project.project_type ?? "Commercial electrical",
-          },
+          context: reviewContext,
           previousRecommendations: previousReview?.recommendations.map((item) => ({
             id: item.id,
             title: item.title,
@@ -711,12 +779,15 @@ export function EstimateBuilder({
   function handleReviewIncreaseMarkup(recommendation: AiReviewRecommendation) {
     const increase = recommendation.suggestedMarkupIncrease ?? 3;
 
+    applyProfitMargin(
+      Math.min(50, Number((state.profit_margin_percent + increase).toFixed(2)))
+    );
+  }
+
+  function applyProfitMargin(targetPercent: number) {
     setState((current) => ({
       ...current,
-      profit_margin_percent: Math.min(
-        50,
-        Number((current.profit_margin_percent + increase).toFixed(2))
-      ),
+      profit_margin_percent: Math.min(50, Number(targetPercent.toFixed(2))),
     }));
     markDirty();
     scrollToSummary();
@@ -1045,12 +1116,7 @@ export function EstimateBuilder({
           onClose={() => setAssistantOpen(false)}
           estimateId={estimateId}
           currentState={state}
-          context={{
-            projectName: project.project_name,
-            customerName: project.customer.company_name,
-            projectAddress: project.project_address,
-            projectType: project.project_type ?? "Commercial electrical",
-          }}
+          context={reviewContext}
           onApplyRecommendations={handleAiApplied}
           onVersionsRefresh={refreshVersions}
         />
@@ -1122,12 +1188,16 @@ export function EstimateBuilder({
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <AssemblyPicker onInsert={insertAssembly} />
-            <p className="text-xs text-muted-foreground">
-              Drag rows to reorder · Select lines for bulk edits
-            </p>
-          </div>
+          <AiEstimateReviewCard
+            state={state}
+            context={reviewContext}
+            loading={reviewLoading}
+            disabled={isLocked}
+            onOpenFullReview={handleOpenReview}
+            onApplyMarkup={applyProfitMargin}
+          />
+
+          <AssembliesLibraryPanel onInsert={insertAssembly} />
 
           {ESTIMATE_CATEGORIES.map((category) => (
             <EstimateSection
@@ -1135,12 +1205,14 @@ export function EstimateBuilder({
               category={category}
               label={ESTIMATE_CATEGORY_LABELS[category]}
               items={lineItemsByCategory[category]}
-              materialProjectType={project.project_type}
               selectedIds={selectedLineIds}
               onToggleSelect={toggleLineSelection}
               onToggleSelectAll={toggleSelectAllInSection}
               onAddRow={addLineItemHandlers[category]}
               onUpdateRow={updateLineItem}
+              onApplyPickerSelection={(localId, selection, currentItem) =>
+                applyPickerSelection(localId, selection, currentItem, category)
+              }
               onDuplicateRow={duplicateLineItem}
               onRemoveRow={removeLineItem}
               onReorderRows={reorderHandlers[category]}

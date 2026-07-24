@@ -3,7 +3,8 @@
 import { memo, useState } from "react";
 import { Copy, GripVertical, Plus, Trash2 } from "lucide-react";
 
-import { MaterialPicker } from "@/components/estimates/material-picker";
+import { LineItemPicker, type LineItemPickerSelection } from "@/components/estimates/line-item-picker";
+import { isPickerCategory } from "@/lib/estimates/line-item-catalogs";
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
   calculateCategoryTotal,
@@ -15,14 +16,16 @@ import {
   type EstimateCategory,
   type EstimateLineItemInput,
 } from "@/lib/estimates/types";
-import { getUnitOptionsForCategory } from "@/lib/estimates/units";
+import {
+  getUnitOptionsForCategory,
+  normalizeUnitForCategory,
+} from "@/lib/estimates/units";
 import { cn } from "@/lib/utils";
 
 type EstimateSectionProps = {
   category: EstimateCategory;
   label: string;
   items: EstimateLineItemInput[];
-  materialProjectType?: string | null;
   selectedIds: Set<string>;
   onToggleSelect: (localId: string) => void;
   onToggleSelectAll: (localIds: string[], selected: boolean) => void;
@@ -31,6 +34,11 @@ type EstimateSectionProps = {
     localId: string,
     field: keyof EstimateLineItemInput,
     value: string | number
+  ) => void;
+  onApplyPickerSelection?: (
+    localId: string,
+    selection: LineItemPickerSelection,
+    currentItem: EstimateLineItemInput
   ) => void;
   onDuplicateRow: (localId: string) => void;
   onRemoveRow: (localId: string) => void;
@@ -111,12 +119,12 @@ function EstimateSectionComponent({
   category,
   label,
   items,
-  materialProjectType,
   selectedIds,
   onToggleSelect,
   onToggleSelectAll,
   onAddRow,
   onUpdateRow,
+  onApplyPickerSelection,
   onDuplicateRow,
   onRemoveRow,
   onReorderRows,
@@ -274,14 +282,42 @@ function EstimateSectionComponent({
                       </button>
                     </td>
                     <td className="border-r border-border/40 p-0">
-                      {category === "materials" ? (
-                        <MaterialPicker
+                      {isPickerCategory(category) ? (
+                        <LineItemPicker
+                          category={category}
                           value={item.description}
-                          projectType={materialProjectType}
-                          onChange={({ description, defaultUnit }) => {
-                            onUpdateRow(localId, "description", description);
-                            if (defaultUnit) {
-                              onUpdateRow(localId, "unit", defaultUnit);
+                          placeholder={
+                            category === "equipment"
+                              ? "Search equipment…"
+                              : undefined
+                          }
+                          onChange={(selection) => {
+                            if (onApplyPickerSelection) {
+                              onApplyPickerSelection(localId, selection, item);
+                              return;
+                            }
+
+                            onUpdateRow(localId, "description", selection.description);
+                            if (selection.defaultUnit) {
+                              onUpdateRow(
+                                localId,
+                                "unit",
+                                normalizeUnitForCategory(category, selection.defaultUnit)
+                              );
+                            }
+                            if (
+                              selection.defaultUnitCost != null &&
+                              selection.defaultUnitCost > 0 &&
+                              item.unit_cost === 0
+                            ) {
+                              onUpdateRow(localId, "unit_cost", selection.defaultUnitCost);
+                            }
+                            if (
+                              selection.defaultUnitCost != null &&
+                              selection.defaultUnitCost > 0 &&
+                              item.quantity === 0
+                            ) {
+                              onUpdateRow(localId, "quantity", 1);
                             }
                           }}
                         />
@@ -295,7 +331,7 @@ function EstimateSectionComponent({
                               event.target.value
                             )
                           }
-                          placeholder="Describe the work or material"
+                          placeholder="Describe the line item"
                           className={cellInputClassName}
                         />
                       )}

@@ -2,26 +2,25 @@
 
 import { LineItemPicker, type LineItemPickerSelection } from "@/components/estimates/line-item-picker";
 
-export type MaterialPickerSelection = LineItemPickerSelection;
+export type EquipmentPickerSelection = LineItemPickerSelection;
 
-type MaterialPickerProps = {
+type EquipmentPickerProps = {
   value: string;
-  onChange: (selection: MaterialPickerSelection) => void;
-  projectType?: string | null;
+  onChange: (selection: EquipmentPickerSelection) => void;
   className?: string;
   placeholder?: string;
 };
 
-/** @deprecated Use LineItemPicker with category="materials" */
-export function MaterialPicker({
+/** @deprecated Use LineItemPicker with category="equipment" */
+export function EquipmentPicker({
   value,
   onChange,
   className,
   placeholder,
-}: MaterialPickerProps) {
+}: EquipmentPickerProps) {
   return (
     <LineItemPicker
-      category="materials"
+      category="equipment"
       value={value}
       onChange={onChange}
       className={className}

@@ -57,6 +57,12 @@ export const ALL_ESTIMATE_UNITS = [
 
 const LEGACY_UNIT_ALIASES: Record<string, string> = {
   days: "day",
+  day: "day",
+  hour: "hrs",
+  hours: "hrs",
+  hr: "hrs",
+  week: "wk",
+  weeks: "wk",
   lot: "ls",
 };
 
