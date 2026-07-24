@@ -21,6 +21,8 @@
     "beta:verify": "node scripts/beta-launch-verify.mjs",
     "org-cookie:verify": "node scripts/verify-organization-cookie.mjs",
     "ai:verify": "node scripts/verify-openai.mjs",
+    "copilot:verify": "npx tsx scripts/verify-copilot-phase1.ts",
+    "copilot:verify-production": "node scripts/verify-copilot-production-readiness.mjs",
     "analytics:verify": "node scripts/verify-analytics.mjs",
     "estimates:verify": "node scripts/verify-estimate-calculations.mjs",
     "estimates:verify-backend": "node scripts/verify-estimate-backend.mjs",

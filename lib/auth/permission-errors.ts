@@ -20,6 +20,13 @@ export class AuthenticationRequiredError extends Error {
   }
 }
 
+export class NotFoundError extends Error {
+  constructor(message = "Resource was not found.") {
+    super(message);
+    this.name = "NotFoundError";
+  }
+}
+
 export function isAuthenticationRequired(error: unknown) {
   return (
     error instanceof AuthenticationRequiredError ||
@@ -30,6 +37,7 @@ export function isAuthenticationRequired(error: unknown) {
 export function apiErrorStatus(error: unknown) {
   if (isAuthenticationRequired(error)) return 401;
   if (isPermissionDenied(error)) return 403;
+  if (error instanceof NotFoundError) return 404;
   return 500;
 }
 
