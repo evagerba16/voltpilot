@@ -19,9 +19,7 @@ export async function requestPasswordReset(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
 
   if (!email) {
-    redirect(
-      `/forgot-password?error=${encodeURIComponent("Enter your email address.")}`
-    );
+    redirect("/forgot-password");
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -30,7 +28,7 @@ export async function requestPasswordReset(formData: FormData) {
 
   if (error) {
     redirect(
-      `/forgot-password?error=${encodeURIComponent(friendlyAuthError(error, "password_reset"))}`
+      `/forgot-password?attempt=1&error=${encodeURIComponent(friendlyAuthError(error, "password_reset"))}`
     );
   }
 
