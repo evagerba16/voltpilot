@@ -1,5 +1,7 @@
 import "server-only";
 
+import { getUser } from "@/lib/auth/get-user";
+import { resolveDisplayName } from "@/lib/auth/display-name";
 import { createClient } from "@/lib/supabase/server";
 import { getDefaultCompanySettings } from "@/lib/company/queries";
 import { readOrganizationPreference } from "@/lib/teams/organization-preference";
@@ -208,10 +210,12 @@ export async function buildTeamContext(
   }
 
   const permissions = getPermissionsForRole(membership.member.role);
+  const user = await getUser();
 
   return {
     userId,
     userEmail: email,
+    displayName: resolveDisplayName(membership.member.display_name, user),
     organizationId: membership.organization.id,
     organizationName: membership.organization.name,
     role: membership.member.role,

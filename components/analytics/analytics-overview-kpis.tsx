@@ -3,22 +3,26 @@
 import {
   BarChart3,
   CircleDollarSign,
-  FolderKanban,
   Percent,
-  PencilLine,
-  TrendingUp,
 } from "lucide-react";
 
-import { StatCard } from "@/components/dashboard/stat-card";
+import { AnalyticsKpiCard } from "@/components/analytics/analytics-kpi-card";
+import type { AnalyticsComparisons } from "@/lib/analytics/comparison";
 import { formatCurrency, formatPercent } from "@/lib/analytics/format";
 import type { AnalyticsData } from "@/lib/analytics/types";
 import { isAnalyticsPortfolioEmpty } from "@/lib/analytics/chart-helpers";
 
 type AnalyticsOverviewKpisProps = {
   executive: AnalyticsData["executive"];
+  comparisons: AnalyticsComparisons["executive"];
+  compareEnabled: boolean;
 };
 
-export function AnalyticsOverviewKpis({ executive }: AnalyticsOverviewKpisProps) {
+export function AnalyticsOverviewKpis({
+  executive,
+  comparisons,
+  compareEnabled,
+}: AnalyticsOverviewKpisProps) {
   const isEmpty = isAnalyticsPortfolioEmpty({ executive });
 
   return (
@@ -30,52 +34,41 @@ export function AnalyticsOverviewKpis({ executive }: AnalyticsOverviewKpisProps)
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-        <StatCard
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <AnalyticsKpiCard
+          index={0}
           title="Total Revenue"
           value={formatCurrency(executive.revenue)}
-          change="Accepted proposals"
-          changeType={executive.revenue > 0 ? "positive" : "neutral"}
+          subtitle="Accepted proposals"
+          tooltip="Total revenue from accepted proposals in the selected period."
           icon={CircleDollarSign}
+          highlight
+          comparison={comparisons.revenue}
+          compareEnabled={compareEnabled}
         />
-        <StatCard
-          title="Total Estimates"
-          value={String(executive.totalEstimates)}
-          change={
-            executive.totalEstimates > 0
-              ? `${executive.averageEstimateSize > 0 ? formatCurrency(executive.averageEstimateSize) : "—"} avg size`
-              : "No estimates yet"
-          }
-          icon={PencilLine}
-        />
-        <StatCard
+        <AnalyticsKpiCard
+          index={1}
           title="Proposal Win Rate"
           value={formatPercent(executive.winRate)}
-          change={`${executive.totalProposals > 0 ? "Across sent proposals" : "Send proposals to track"}`}
-          changeType={executive.winRate >= 40 ? "positive" : "neutral"}
+          subtitle={
+            executive.totalProposals > 0
+              ? "Across sent proposals"
+              : "Send proposals to track"
+          }
+          tooltip="Percentage of decided proposals that were accepted."
           icon={BarChart3}
+          comparison={comparisons.winRate}
+          compareEnabled={compareEnabled}
         />
-        <StatCard
+        <AnalyticsKpiCard
+          index={2}
           title="Average Gross Margin"
           value={formatPercent(executive.grossMarginPercent)}
-          change={`${formatCurrency(executive.grossProfit)} gross profit`}
-          changeType={
-            executive.grossMarginPercent >= 15 ? "positive" : "neutral"
-          }
+          subtitle={`${formatCurrency(executive.grossProfit)} gross profit`}
+          tooltip="Gross profit divided by revenue across finalized estimates."
           icon={Percent}
-        />
-        <StatCard
-          title="Active Projects"
-          value={String(executive.activeProjects)}
-          change="In progress pipeline"
-          icon={FolderKanban}
-        />
-        <StatCard
-          title="Estimated Pipeline Value"
-          value={formatCurrency(executive.pipelineValue)}
-          change="Open estimating & proposals"
-          changeType={executive.pipelineValue > 0 ? "positive" : "neutral"}
-          icon={TrendingUp}
+          comparison={comparisons.grossMarginPercent}
+          compareEnabled={compareEnabled}
         />
       </div>
 

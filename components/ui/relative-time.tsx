@@ -13,9 +13,13 @@ function formatShortTimestamp(value: string) {
 
 function formatRelativeTime(value: string, now: number) {
   const diff = now - new Date(value).getTime();
+  const minutes = Math.floor(diff / (1000 * 60));
+  const hours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-  if (days === 0) return "Today";
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  if (hours < 24) return `${hours} hr ago`;
   if (days === 1) return "Yesterday";
   if (days < 7) return `${days} days ago`;
 

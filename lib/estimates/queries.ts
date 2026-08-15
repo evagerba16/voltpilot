@@ -185,6 +185,7 @@ export async function getEstimateById(id: string) {
           project_address,
           project_type,
           customer:customers!inner (
+            id,
             company_name,
             contact_name
           )

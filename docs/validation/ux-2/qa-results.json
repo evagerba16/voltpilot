@@ -1,0 +1,76 @@
+{
+  "generatedAt": "2026-08-04T04:35:02.824Z",
+  "phase": "UX-2",
+  "checks": [
+    {
+      "id": "customer.tabs",
+      "status": "PASS",
+      "detail": "Tabbed layout wired"
+    },
+    {
+      "id": "customer.compact-ai",
+      "status": "PASS",
+      "detail": "Compact AI on customer"
+    },
+    {
+      "id": "customer.light-hero",
+      "status": "PASS",
+      "detail": "Gradient hero removed"
+    },
+    {
+      "id": "customer.primary-cta",
+      "status": "PASS",
+      "detail": "Primary CTA present"
+    },
+    {
+      "id": "customer.attention-strip",
+      "status": "PASS",
+      "detail": "Attention strip wired"
+    },
+    {
+      "id": "project.tabs",
+      "status": "PASS",
+      "detail": "Tabbed layout wired"
+    },
+    {
+      "id": "project.compact-ai",
+      "status": "PASS",
+      "detail": "Compact AI on project"
+    },
+    {
+      "id": "project.light-hero",
+      "status": "PASS",
+      "detail": "Dark gradient hero removed"
+    },
+    {
+      "id": "project.kpi-limit",
+      "status": "PASS",
+      "detail": "Overview KPIs limited"
+    },
+    {
+      "id": "dashboard.context-cta",
+      "status": "PASS",
+      "detail": "Context-aware dashboard CTA"
+    },
+    {
+      "id": "dashboard.primary-action-logic",
+      "status": "PASS",
+      "detail": "Primary action resolver exists"
+    },
+    {
+      "id": "ai.insight-categories",
+      "status": "PASS",
+      "detail": "AI insight categories defined"
+    },
+    {
+      "id": "build.typescript",
+      "status": "PASS",
+      "detail": "tsc --noEmit"
+    }
+  ],
+  "summary": {
+    "pass": 13,
+    "fail": 0,
+    "total": 13
+  }
+}

@@ -25,6 +25,7 @@ type ProjectFormProps = {
   customers: CustomerOption[];
   project?: ProjectWithCustomer | null;
   cancelHref: string;
+  defaultCustomerId?: string;
 };
 
 const inputClassName =
@@ -36,6 +37,7 @@ export function ProjectForm({
   customers,
   project,
   cancelHref,
+  defaultCustomerId,
 }: ProjectFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -121,7 +123,7 @@ export function ProjectForm({
               id="customer_id"
               name="customer_id"
               required
-              defaultValue={project?.customer_id ?? ""}
+              defaultValue={project?.customer_id ?? defaultCustomerId ?? ""}
               className={inputClassName}
             >
               <option value="" disabled>

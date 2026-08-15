@@ -2,6 +2,7 @@ import "server-only";
 
 import { buildAnalyticsViewModel } from "@/lib/analytics/analytics-service";
 import { buildAiInsightsViewModel } from "@/lib/analytics/ai-insights-service";
+import { buildAnalyticsComparisons } from "@/lib/analytics/comparison";
 import { buildForecastViewModel } from "@/lib/analytics/forecast-service";
 import type { AnalyticsData } from "@/lib/analytics/types";
 
@@ -14,11 +15,15 @@ const PIPELINE_COLORS: Record<string, string> = {
   Archived: "#64748b",
 };
 
-export function precomputeAnalyticsViewModels(data: AnalyticsData) {
+export function precomputeAnalyticsViewModels(
+  data: AnalyticsData,
+  priorData: AnalyticsData | null = null
+) {
   return {
     analytics: buildAnalyticsViewModel(data),
     forecasts: buildForecastViewModel(data),
     aiInsights: buildAiInsightsViewModel(data),
+    comparisons: buildAnalyticsComparisons(data, priorData),
     pipelineWithColor: data.charts.projectPipeline.map((stage) => ({
       ...stage,
       fill: PIPELINE_COLORS[stage.status] ?? "#64748b",

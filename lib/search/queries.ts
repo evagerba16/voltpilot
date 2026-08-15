@@ -72,7 +72,7 @@ export async function globalSearch(
       type: "customer",
       title: customer.company_name,
       subtitle: customer.contact_name,
-      href: `/customers?q=${encodeURIComponent(customer.company_name)}`,
+      href: `/customers/${customer.id}`,
     });
   }
 

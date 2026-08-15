@@ -70,6 +70,7 @@ export type EstimateWithProject = Estimate & {
     project_address: string | null;
     project_type: string | null;
     customer: {
+      id: string;
       company_name: string;
       contact_name: string;
     };

@@ -48,6 +48,72 @@ type EstimateSectionProps = {
 const cellInputClassName =
   "h-8 w-full border-0 bg-transparent px-2 text-sm outline-none focus:bg-background focus:ring-1 focus:ring-ring/50";
 
+function renderDescriptionCell({
+  category,
+  item,
+  localId,
+  onApplyPickerSelection,
+  onUpdateRow,
+}: {
+  category: EstimateCategory;
+  item: EstimateLineItemInput;
+  localId: string;
+  onApplyPickerSelection?: EstimateSectionProps["onApplyPickerSelection"];
+  onUpdateRow: EstimateSectionProps["onUpdateRow"];
+}) {
+  const handlePickerChange = (selection: LineItemPickerSelection) => {
+    if (onApplyPickerSelection) {
+      onApplyPickerSelection(localId, selection, item);
+      return;
+    }
+
+    onUpdateRow(localId, "description", selection.description);
+    if (selection.defaultUnit) {
+      onUpdateRow(
+        localId,
+        "unit",
+        normalizeUnitForCategory(category, selection.defaultUnit)
+      );
+    }
+    if (
+      selection.defaultUnitCost != null &&
+      selection.defaultUnitCost > 0 &&
+      item.unit_cost === 0
+    ) {
+      onUpdateRow(localId, "unit_cost", selection.defaultUnitCost);
+    }
+    if (
+      selection.defaultUnitCost != null &&
+      selection.defaultUnitCost > 0 &&
+      item.quantity === 0
+    ) {
+      onUpdateRow(localId, "quantity", 1);
+    }
+  };
+
+  if (isPickerCategory(category)) {
+    return (
+      <LineItemPicker
+        category={category}
+        value={item.description}
+        onChange={handlePickerChange}
+      />
+    );
+  }
+
+  return (
+    <input
+      value={item.description}
+      onChange={(event) =>
+        onUpdateRow(localId, "description", event.target.value)
+      }
+      placeholder="Describe the line item"
+      className={cellInputClassName}
+    />
+  );
+}
+
+
 const numberInputClassName = cn(
   cellInputClassName,
   "text-right tabular-nums"
@@ -282,59 +348,13 @@ function EstimateSectionComponent({
                       </button>
                     </td>
                     <td className="border-r border-border/40 p-0">
-                      {isPickerCategory(category) ? (
-                        <LineItemPicker
-                          category={category}
-                          value={item.description}
-                          placeholder={
-                            category === "equipment"
-                              ? "Search equipment…"
-                              : undefined
-                          }
-                          onChange={(selection) => {
-                            if (onApplyPickerSelection) {
-                              onApplyPickerSelection(localId, selection, item);
-                              return;
-                            }
-
-                            onUpdateRow(localId, "description", selection.description);
-                            if (selection.defaultUnit) {
-                              onUpdateRow(
-                                localId,
-                                "unit",
-                                normalizeUnitForCategory(category, selection.defaultUnit)
-                              );
-                            }
-                            if (
-                              selection.defaultUnitCost != null &&
-                              selection.defaultUnitCost > 0 &&
-                              item.unit_cost === 0
-                            ) {
-                              onUpdateRow(localId, "unit_cost", selection.defaultUnitCost);
-                            }
-                            if (
-                              selection.defaultUnitCost != null &&
-                              selection.defaultUnitCost > 0 &&
-                              item.quantity === 0
-                            ) {
-                              onUpdateRow(localId, "quantity", 1);
-                            }
-                          }}
-                        />
-                      ) : (
-                        <input
-                          value={item.description}
-                          onChange={(event) =>
-                            onUpdateRow(
-                              localId,
-                              "description",
-                              event.target.value
-                            )
-                          }
-                          placeholder="Describe the line item"
-                          className={cellInputClassName}
-                        />
-                      )}
+                      {renderDescriptionCell({
+                        category,
+                        item,
+                        localId,
+                        onApplyPickerSelection,
+                        onUpdateRow,
+                      })}
                     </td>
                     <td className="border-r border-border/40 p-0">
                       <DecimalCellInput

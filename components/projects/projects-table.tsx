@@ -27,6 +27,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { usePermissions } from "@/lib/hooks/use-permissions";
 import { formatCurrency, formatDate } from "@/lib/projects/format";
 import { buildProjectsUrl } from "@/lib/projects/url";
+import type { ProjectListMetrics } from "@/lib/projects/profile-types";
 import {
   PROJECT_STATUS_STYLES,
   type ProjectArchiveFilter,
@@ -34,9 +35,11 @@ import {
   type ProjectWithCustomer,
 } from "@/lib/projects/types";
 import { cn } from "@/lib/utils";
+import { ProjectProgressBar } from "@/components/projects/project-progress-bar";
 
 type ProjectsTableProps = {
   projects: ProjectWithCustomer[];
+  listMetrics: Record<string, ProjectListMetrics>;
   total: number;
   page: number;
   totalPages: number;
@@ -62,6 +65,29 @@ const columns: SortableColumn[] = [
   { key: "bid_due_date", label: "Bid due", className: "hidden lg:table-cell" },
   { key: "created_at", label: "Created", className: "hidden xl:table-cell" },
 ];
+
+function BidDueBadge({
+  urgency,
+}: {
+  urgency: ProjectListMetrics["bidDueUrgency"];
+}) {
+  if (!urgency || urgency === "normal") {
+    return null;
+  }
+
+  return (
+    <span
+      className={cn(
+        "ml-2 inline-flex rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide",
+        urgency === "overdue"
+          ? "bg-destructive/10 text-destructive"
+          : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+      )}
+    >
+      {urgency === "overdue" ? "Overdue" : "Due soon"}
+    </span>
+  );
+}
 
 function SortIcon({
   column,
@@ -183,6 +209,7 @@ function ProjectActions({ project }: { project: ProjectWithCustomer }) {
 
 export function ProjectsTable({
   projects,
+  listMetrics,
   total,
   page,
   totalPages,
@@ -199,9 +226,9 @@ export function ProjectsTable({
   const canEdit = can("projects.edit");
 
   return (
-    <div className="rounded-xl border border-border bg-card shadow-sm">
+    <div className="rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1080px] text-left text-sm">
+        <table className="w-full min-w-[1180px] text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
               {columns.map((column) => (
@@ -230,6 +257,9 @@ export function ProjectsTable({
                   </Link>
                 </th>
               ))}
+              <th className="hidden px-6 py-3 font-medium text-muted-foreground lg:table-cell">
+                Progress
+              </th>
               <th className="px-6 py-3 font-medium text-muted-foreground">
                 Customer
               </th>
@@ -250,7 +280,7 @@ export function ProjectsTable({
           <tbody className="divide-y divide-border/60">
             {projects.length === 0 ? (
               <tr>
-                <td colSpan={10} className="p-0">
+                <td colSpan={11} className="p-0">
                   <EmptyState
                     icon={FolderKanban}
                     title={
@@ -288,11 +318,13 @@ export function ProjectsTable({
                 </td>
               </tr>
             ) : (
-              projects.map((project) => (
+              projects.map((project) => {
+                const metrics = listMetrics[project.id];
+                return (
                 <tr
                   key={project.id}
                   className={cn(
-                    "cursor-pointer transition-colors hover:bg-muted/20",
+                    "cursor-pointer transition-all duration-200 hover:bg-muted/30 hover:shadow-[inset_3px_0_0_0_hsl(var(--primary))]",
                     (project.status === "Archived" || project.archived_at) &&
                       "opacity-70"
                   )}
@@ -303,6 +335,11 @@ export function ProjectsTable({
                     {project.project_address ? (
                       <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                         {project.project_address}
+                      </p>
+                    ) : null}
+                    {metrics ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {metrics.estimateCount} est. · {metrics.proposalCount} prop.
                       </p>
                     ) : null}
                   </td>
@@ -320,10 +357,22 @@ export function ProjectsTable({
                     {formatCurrency(project.estimated_value)}
                   </td>
                   <td className="hidden px-6 py-4 text-muted-foreground lg:table-cell">
-                    {formatDate(project.bid_due_date)}
+                    <span className="inline-flex items-center">
+                      {formatDate(project.bid_due_date)}
+                      <BidDueBadge urgency={metrics?.bidDueUrgency ?? null} />
+                    </span>
                   </td>
                   <td className="hidden px-6 py-4 text-muted-foreground xl:table-cell">
                     {formatDate(project.created_at)}
+                  </td>
+                  <td className="hidden px-6 py-4 lg:table-cell">
+                    <div className="w-28">
+                      <ProjectProgressBar
+                        value={metrics?.progressPercent ?? 0}
+                        size="sm"
+                        showLabel={false}
+                      />
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <p className="font-medium">{project.customer.company_name}</p>
@@ -341,7 +390,8 @@ export function ProjectsTable({
                     <ProjectActions project={project} />
                   </td>
                 </tr>
-              ))
+              );
+              })
             )}
           </tbody>
         </table>

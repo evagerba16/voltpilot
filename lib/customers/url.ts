@@ -3,6 +3,9 @@ type CustomersUrlParams = {
   q?: string;
   sort?: string;
   order?: string;
+  projects?: string;
+  notes?: string;
+  status?: string;
 };
 
 export function buildCustomersUrl({
@@ -10,6 +13,9 @@ export function buildCustomersUrl({
   q,
   sort,
   order,
+  projects,
+  notes,
+  status,
 }: CustomersUrlParams) {
   const params = new URLSearchParams();
 
@@ -27,6 +33,18 @@ export function buildCustomersUrl({
 
   if (order) {
     params.set("order", order);
+  }
+
+  if (projects && projects !== "all") {
+    params.set("projects", projects);
+  }
+
+  if (notes && notes !== "all") {
+    params.set("notes", notes);
+  }
+
+  if (status && status !== "all") {
+    params.set("status", status);
   }
 
   const query = params.toString();

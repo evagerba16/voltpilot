@@ -1,0 +1,21 @@
+{
+  "mode": "beta",
+  "status": "active",
+  "startedAt": "2026-08-05",
+  "instructions": "Log ONLY real workflow blockers observed during contractor usage. Severity: critical | high | medium | low. No hypothetical improvements.",
+  "severityDefinitions": {
+    "critical": "Workflow blocked — contractor cannot complete task",
+    "high": "Significant slowdown — workaround exists but painful",
+    "medium": "Noticeable friction — does not block daily work",
+    "low": "Minor annoyance — backlog only after beta"
+  },
+  "metrics": {
+    "timeToFirstCustomer": null,
+    "timeToFirstEstimate": null,
+    "timeToFirstProposal": null,
+    "timeToFirstCompletedWorkflow": null,
+    "supportRequests": 0,
+    "retentionAfterOneWeek": null
+  },
+  "entries": []
+}

@@ -1,65 +1,68 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import {
-  Archive,
-  ArrowLeft,
-  Copy,
-  Download,
-  Eye,
-  Pencil,
-  Printer,
-  Save,
-  Send,
-  Trash2,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import {
   archiveProposal,
   autosaveProposal,
   deleteProposal,
   duplicateProposal,
+  markProposalAcceptedManually,
   saveProposal,
   updateProposalBranding,
 } from "@/app/(dashboard)/proposals/actions";
+import {
+  AiProposalReviewCard,
+} from "@/components/proposals/ai-proposal-review-card";
+import { ProposalAcceptedHandoff } from "@/components/proposals/proposal-accepted-handoff";
+import { buildAcceptanceNextSteps } from "@/lib/proposals/acceptance-next-steps";
+import { ProposalActivityTimeline } from "@/components/proposals/proposal-activity-timeline";
+import { ProposalAiInsightsCompact } from "@/components/proposals/proposal-ai-insights-compact";
+import { ProposalAnalyticsPanel } from "@/components/proposals/proposal-analytics-panel";
+import { ProposalBuilderOverflowMenu } from "@/components/proposals/proposal-builder-overflow-menu";
 import { ProposalMediaEditor } from "@/components/proposals/proposal-media-editor";
 import { ProposalPreview } from "@/components/proposals/proposal-preview";
 import { ProposalSendDialog } from "@/components/proposals/proposal-send-dialog";
+import { ProposalSignaturePanel } from "@/components/proposals/proposal-signature-panel";
 import {
-  ProposalWorkflowButton,
   ProposalWorkflowPanel,
 } from "@/components/proposals/proposal-workflow-panel";
 import {
-  ProposalAssistantButton,
+  ProposalWorkspaceHeader,
+  ProposalWorkspacePriceContext,
+  ProposalWorkspaceToolbar,
+} from "@/components/proposals/proposal-workspace-header";
+import {
   ProposalAssistantPanel,
 } from "@/components/ai/proposal-assistant-panel";
-import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/components/ui/button-variants";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { useToast } from "@/components/ui/toast-provider";
 import { mapProposalToEditorState } from "@/lib/proposals/build-from-estimate";
-import { formatCurrency, formatProposalStatus } from "@/lib/proposals/format";
+import { formatCurrency } from "@/lib/proposals/format";
+import { resolveProposalPrimaryAction } from "@/lib/proposals/primary-action";
+import { reviewProposal } from "@/lib/ai/proposal-review";
+import type { ProposalInsightWithAction, ProposalProfile } from "@/lib/proposals/profile-types";
 import {
   isProposalLocked,
   PROPOSAL_LOCKED_MESSAGE,
 } from "@/lib/proposals/proposal-lock";
 import {
   PROPOSAL_AUTOSAVE_DEBOUNCE_MS,
-  PROPOSAL_STATUS_STYLES,
   type ProposalCompanySnapshot,
   type ProposalEditorState,
   type ProposalEstimateSnapshot,
   type ProposalMediaItem,
   type ProposalWithRelations,
 } from "@/lib/proposals/types";
-import { cn } from "@/lib/utils";
 import { useKeyboardShortcut } from "@/lib/hooks/use-keyboard-shortcut";
 import { usePermissions } from "@/lib/hooks/use-permissions";
 
 type ProposalEditorProps = {
   proposal: ProposalWithRelations;
   media: ProposalMediaItem[];
+  profile: ProposalProfile;
+  insights: ProposalInsightWithAction[];
 };
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -77,41 +80,13 @@ function serializeState(state: ProposalEditorState) {
   return JSON.stringify(state);
 }
 
-function SaveStatusIndicator({
-  status,
-  savedAt,
-}: {
-  status: SaveStatus;
-  savedAt: string | null;
-}) {
-  if (status === "idle") return null;
-
-  const label =
-    status === "saving"
-      ? "Saving..."
-      : status === "saved"
-        ? savedAt
-          ? `Saved ${new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(savedAt))}`
-          : "All changes saved"
-        : "Couldn't save changes";
-
-  return (
-    <span
-      className={cn(
-        "text-sm",
-        status === "error"
-          ? "text-destructive"
-          : status === "saving"
-            ? "text-muted-foreground"
-            : "text-emerald-600 dark:text-emerald-400"
-      )}
-    >
-      {label}
-    </span>
-  );
-}
-
-export function ProposalEditor({ proposal, media }: ProposalEditorProps) {
+export function ProposalEditor({
+  proposal,
+  media,
+  profile,
+  insights,
+}: ProposalEditorProps) {
+  const router = useRouter();
   const { can } = usePermissions();
   const locked = isProposalLocked(proposal.status);
   const canEdit = can("proposals.edit") && !locked;
@@ -129,6 +104,7 @@ export function ProposalEditor({ proposal, media }: ProposalEditorProps) {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [workflowOpen, setWorkflowOpen] = useState(false);
+  const [overflowOpen, setOverflowOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const confirm = useConfirm();
   const toast = useToast();
@@ -150,12 +126,86 @@ export function ProposalEditor({ proposal, media }: ProposalEditorProps) {
 
   const estimateSnapshot = proposal.estimate_snapshot as ProposalEstimateSnapshot | null;
 
+  const reviewResult = useMemo(() => reviewProposal(state), [state]);
+
+  const primaryAction = useMemo(
+    () =>
+      resolveProposalPrimaryAction({
+        status: proposal.status,
+        canEdit,
+        readyToSend: reviewResult.readyToSend,
+      }),
+    [proposal.status, canEdit, reviewResult.readyToSend]
+  );
+
+  const grossMarginLabel =
+    estimateSnapshot?.gross_margin_percent && estimateSnapshot.gross_margin_percent > 0
+      ? `${estimateSnapshot.gross_margin_percent.toFixed(1)}%`
+      : "—";
+
+  const isAccepted = proposal.status === "Accepted";
+
+  const canMarkAccepted =
+    can("proposals.edit") &&
+    (proposal.status === "Sent" || proposal.status === "Viewed");
+
+  const acceptanceNextSteps = useMemo(
+    () =>
+      buildAcceptanceNextSteps({
+        projectId: proposal.project.id,
+        projectType: proposal.project.project_type,
+        hasGeneralContractor: Boolean(proposal.project.general_contractor),
+        estimateSnapshot,
+        grossMarginPercent: estimateSnapshot?.gross_margin_percent ?? null,
+      }),
+    [
+      proposal.project.id,
+      proposal.project.project_type,
+      proposal.project.general_contractor,
+      estimateSnapshot,
+    ]
+  );
+
+  function handlePrimaryAction() {
+    switch (primaryAction.kind) {
+      case "send":
+      case "follow_up":
+        setSendOpen(true);
+        break;
+      case "manage_job":
+        router.push(`/projects/${proposal.project.id}?tab=job-costing`);
+        break;
+      case "preview":
+        setMode("preview");
+        break;
+      case "workflow":
+        setWorkflowOpen(true);
+        break;
+    }
+  }
+
+  function handleBrandingChange(next: typeof branding) {
+    setBranding(next);
+    void updateProposalBranding(proposal.id, next);
+  }
+
   function updateField<K extends keyof ProposalEditorState>(
     field: K,
     value: ProposalEditorState[K]
   ) {
     setState((current) => ({ ...current, [field]: value }));
     setSaveStatus("idle");
+  }
+
+  function focusProposalField(field: keyof ProposalEditorState) {
+    setMode("edit");
+    window.requestAnimationFrame(() => {
+      const element = document.getElementById(field);
+      element?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+        element.focus();
+      }
+    });
   }
 
   const runAutosave = useCallback(
@@ -260,6 +310,33 @@ export function ProposalEditor({ proposal, media }: ProposalEditorProps) {
     });
   }
 
+  async function handleMarkAccepted() {
+    if (!canMarkAccepted) return;
+
+    const confirmed = await confirm({
+      title: "Mark proposal as accepted?",
+      description: `Record that ${proposal.project.customer.company_name} accepted this bid outside the portal. The project will move to Awarded and you can start job costing.`,
+      confirmLabel: "Mark as accepted",
+      variant: "default",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await markProposalAcceptedManually(proposal.id);
+
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Proposal marked as accepted — project is now awarded.");
+      router.refresh();
+    });
+  }
+
   function handleDuplicate() {
     if (!can("proposals.edit")) return;
 
@@ -277,152 +354,77 @@ export function ProposalEditor({ proposal, media }: ProposalEditorProps) {
     window.print();
   }
 
+  function handleInsightAction(insight: ProposalInsightWithAction) {
+    if (insight.onActionField === "send") {
+      setSendOpen(true);
+      return;
+    }
+
+    if (insight.onActionField === "workflow") {
+      setWorkflowOpen(true);
+      return;
+    }
+
+    setMode("edit");
+  }
+
   return (
     <div className="space-y-6">
-      <div className="sticky top-0 z-20 -mx-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={cn(
-                  "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
-                  PROPOSAL_STATUS_STYLES[proposal.status]
-                )}
-              >
-                {formatProposalStatus(proposal.status)}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {proposal.proposal_number}
-              </span>
-            </div>
-            <p className="mt-1 text-2xl font-bold tabular-nums">
-              {formatCurrency(proposal.amount)}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href={`/projects/${proposal.project.id}`}
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              View project
-            </Link>
-            {proposal.estimate ? (
-              <Link
-                href={`/estimates/${proposal.estimate.id}`}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                View estimate
-              </Link>
-            ) : null}
-            {proposal.public_token ? (
-              <Link
-                href={`/p/${proposal.public_token}`}
-                target="_blank"
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                Customer portal
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      </div>
+      <ProposalWorkspaceHeader
+        status={proposal.status}
+        proposalNumber={proposal.proposal_number}
+        title={state.title}
+        isLocked={locked}
+        onTitleChange={(value) => updateField("title", value)}
+        project={proposal.project}
+        estimateTitle={proposal.estimate?.title ?? null}
+        branding={branding}
+        onBrandingChange={handleBrandingChange}
+      />
 
-      <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-3">
-          <Link
-            href="/proposals"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" />
-            Back to proposals
-          </Link>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {proposal.project.customer.company_name}
-            </p>
-            <p className="text-lg font-semibold">{proposal.project.project_name}</p>
-            <p className="text-sm text-muted-foreground">
-              From estimate: {proposal.estimate?.title ?? "None linked"}
-            </p>
-          </div>
-        </div>
+      <ProposalWorkspaceToolbar
+        primaryAction={primaryAction}
+        onPrimaryAction={handlePrimaryAction}
+        pending={pending}
+        canEdit={canEdit}
+        mode={mode}
+        onModeChange={setMode}
+        saveStatus={saveStatus}
+        savedAt={savedAt}
+        onOpenOverflow={() => setOverflowOpen(true)}
+      />
 
-        <div className="flex flex-wrap items-center gap-2">
-          {canEdit ? (
-            <SaveStatusIndicator status={saveStatus} savedAt={savedAt} />
-          ) : null}
-          <div className="flex rounded-lg border border-border p-0.5">
-            {canEdit ? (
-              <button
-                type="button"
-                onClick={() => setMode("edit")}
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "sm" }),
-                  mode === "edit" && "bg-muted text-foreground"
-                )}
-              >
-                <Pencil className="size-3.5" />
-                Edit
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setMode("preview")}
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "sm" }),
-                mode === "preview" && "bg-muted text-foreground"
-              )}
-            >
-              <Eye className="size-3.5" />
-              Preview
-            </button>
-          </div>
-          <ProposalWorkflowButton onClick={() => setWorkflowOpen(true)} />
-          {canEdit ? (
-            <ProposalAssistantButton onClick={() => setAssistantOpen(true)} />
-          ) : null}
-          {can("proposals.edit") ? (
-            <Button variant="outline" onClick={() => setSendOpen(true)}>
-              <Send data-icon="inline-start" />
-              Send
-            </Button>
-          ) : null}
-          <a
-            href={`/proposals/${proposal.id}/pdf`}
-            target="_blank"
-            className={buttonVariants({ variant: "outline" })}
-          >
-            <Download data-icon="inline-start" />
-            PDF
-          </a>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer data-icon="inline-start" />
-            Print
-          </Button>
-          {can("proposals.edit") ? (
-            <Button variant="outline" onClick={handleDuplicate} disabled={pending}>
-              <Copy data-icon="inline-start" />
-              Duplicate
-            </Button>
-          ) : null}
-          {canEdit ? (
-            <>
-              <Button variant="outline" onClick={handleArchive} disabled={pending}>
-                <Archive data-icon="inline-start" />
-                Archive
-              </Button>
-              <Button variant="outline" onClick={handleDelete} disabled={pending}>
-                <Trash2 data-icon="inline-start" />
-                Delete
-              </Button>
-              <Button onClick={handleSave} disabled={pending}>
-                <Save data-icon="inline-start" />
-                {pending ? "Saving..." : "Save"}
-              </Button>
-            </>
-          ) : null}
-        </div>
-      </div>
+      {!isAccepted ? (
+        <ProposalWorkspacePriceContext
+          amount={formatCurrency(proposal.amount)}
+          grossMarginPercent={grossMarginLabel}
+        />
+      ) : null}
+
+      {isAccepted ? (
+        <ProposalAcceptedHandoff
+          customerName={proposal.project.customer.company_name}
+          contactName={proposal.project.customer.contact_name}
+          projectName={proposal.project.project_name}
+          projectType={proposal.project.project_type}
+          projectAddress={proposal.project.project_address}
+          amount={proposal.amount}
+          grossMarginPercent={estimateSnapshot?.gross_margin_percent ?? null}
+          acceptedAt={proposal.accepted_at}
+          signerName={proposal.customer_signed_name}
+          nextSteps={acceptanceNextSteps}
+        />
+      ) : null}
+
+      {!isAccepted ? (
+        <ProposalAiInsightsCompact
+          insights={insights}
+          projectId={proposal.project.id}
+          customerId={proposal.project.customer.id}
+          proposalTitle={state.title || proposal.title}
+          onAction={handleInsightAction}
+        />
+      ) : null}
 
       {error ? (
         <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -430,13 +432,37 @@ export function ProposalEditor({ proposal, media }: ProposalEditorProps) {
         </p>
       ) : null}
 
-      {locked ? (
+      {locked && !isAccepted ? (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
           {PROPOSAL_LOCKED_MESSAGE}
         </p>
       ) : null}
 
-      {mode === "preview" || !canEdit ? (
+      {isAccepted ? (
+        <details className="group rounded-2xl border border-border bg-card shadow-sm">
+          <summary className="cursor-pointer list-none px-6 py-4 text-sm font-semibold marker:content-none [&::-webkit-details-marker]:hidden">
+            View signed proposal
+          </summary>
+          <div className="border-t border-border p-4 sm:p-6">
+            <ProposalPreview
+              proposal={{
+                ...proposal,
+                title: state.title,
+                amount: proposal.amount,
+                customer_logo_url: branding.customerLogoUrl || null,
+                brand_primary_color: branding.brandPrimaryColor || null,
+                brand_accent_color: branding.brandAccentColor || null,
+              }}
+              content={state}
+              company={company}
+              estimateSnapshot={estimateSnapshot}
+              media={mediaItems}
+              customerSignatureData={proposal.customer_signature_data}
+              customerSignedAt={proposal.accepted_at}
+            />
+          </div>
+        </details>
+      ) : mode === "preview" || !canEdit ? (
         <ProposalPreview
           proposal={{
             ...proposal,
@@ -455,23 +481,13 @@ export function ProposalEditor({ proposal, media }: ProposalEditorProps) {
         />
       ) : (
         <div className="grid gap-6 xl:grid-cols-2">
-          <fieldset disabled={!canEdit} className="space-y-4 rounded-xl border border-border bg-card p-5 shadow-sm">
+          <fieldset
+            disabled={!canEdit}
+            className="space-y-4 rounded-xl border border-border bg-card p-5 shadow-sm"
+          >
             <h2 className="text-base font-semibold">Proposal content</h2>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <label htmlFor="title" className={labelClassName}>
-                  Proposal title
-                </label>
-                <input
-                  id="title"
-                  value={state.title}
-                  onChange={(e) => updateField("title", e.target.value)}
-                  className={inputClassName}
-                  readOnly={!canEdit}
-                  disabled={!canEdit}
-                />
-              </div>
               <div className="space-y-2">
                 <label htmlFor="proposal_date" className={labelClassName}>
                   Proposal date
@@ -496,7 +512,7 @@ export function ProposalEditor({ proposal, media }: ProposalEditorProps) {
                   className={inputClassName}
                 />
               </div>
-              <div className="space-y-2 flex items-end sm:col-span-2">
+              <div className="flex items-end sm:col-span-2">
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -521,7 +537,6 @@ export function ProposalEditor({ proposal, media }: ProposalEditorProps) {
                 ["terms_and_conditions", "Terms & conditions"],
                 ["warranty_information", "Warranty information"],
                 ["notes", "Customer-facing notes"],
-                ["internal_notes", "Internal notes (not shown to customer)"],
               ] as const
             ).map(([field, label]) => (
               <div key={field} className="space-y-2">
@@ -538,130 +553,79 @@ export function ProposalEditor({ proposal, media }: ProposalEditorProps) {
               </div>
             ))}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="customer_signature_name" className={labelClassName}>
-                  Customer signature name
-                </label>
-                <input
-                  id="customer_signature_name"
-                  value={state.customer_signature_name}
-                  onChange={(e) =>
-                    updateField("customer_signature_name", e.target.value)
-                  }
-                  className={inputClassName}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="customer_signature_title" className={labelClassName}>
-                  Customer signature title
-                </label>
-                <input
-                  id="customer_signature_title"
-                  value={state.customer_signature_title}
-                  onChange={(e) =>
-                    updateField("customer_signature_title", e.target.value)
-                  }
-                  className={inputClassName}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="contractor_signature_name" className={labelClassName}>
-                  Contractor signature name
-                </label>
-                <input
-                  id="contractor_signature_name"
-                  value={state.contractor_signature_name}
-                  onChange={(e) =>
-                    updateField("contractor_signature_name", e.target.value)
-                  }
-                  className={inputClassName}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="contractor_signature_title" className={labelClassName}>
-                  Contractor signature title
-                </label>
-                <input
-                  id="contractor_signature_title"
-                  value={state.contractor_signature_title}
-                  onChange={(e) =>
-                    updateField("contractor_signature_title", e.target.value)
-                  }
-                  className={inputClassName}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4 rounded-xl border border-border bg-muted/10 p-4">
-              <h3 className="text-sm font-semibold">Branding</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <label htmlFor="customer_logo_url" className={labelClassName}>
-                    Customer logo URL (optional)
-                  </label>
-                  <input
-                    id="customer_logo_url"
-                    value={branding.customerLogoUrl}
-                    onChange={(event) =>
-                      setBranding((current) => ({
-                        ...current,
-                        customerLogoUrl: event.target.value,
-                      }))
-                    }
-                    onBlur={() => {
-                      void updateProposalBranding(proposal.id, branding);
-                    }}
-                    className={inputClassName}
-                    placeholder="https://..."
-                  />
-                </div>
+            <details className="group rounded-xl border border-border/60 bg-muted/10">
+              <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-muted-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+                Internal notes & signatures
+              </summary>
+              <div className="space-y-4 border-t border-border/60 px-4 pb-4 pt-3">
                 <div className="space-y-2">
-                  <label htmlFor="brand_primary_color" className={labelClassName}>
-                    Primary color
+                  <label htmlFor="internal_notes" className={labelClassName}>
+                    Internal notes (not shown to customer)
                   </label>
-                  <input
-                    id="brand_primary_color"
-                    type="color"
-                    value={branding.brandPrimaryColor || "#1e3a5f"}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setBranding((current) => ({
-                        ...current,
-                        brandPrimaryColor: value,
-                      }));
-                      void updateProposalBranding(proposal.id, {
-                        ...branding,
-                        brandPrimaryColor: value,
-                      });
-                    }}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-1"
+                  <textarea
+                    id="internal_notes"
+                    rows={3}
+                    value={state.internal_notes}
+                    onChange={(e) => updateField("internal_notes", e.target.value)}
+                    className={textareaClassName}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label htmlFor="brand_accent_color" className={labelClassName}>
-                    Accent color
-                  </label>
-                  <input
-                    id="brand_accent_color"
-                    type="color"
-                    value={branding.brandAccentColor || "#0ea5e9"}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setBranding((current) => ({
-                        ...current,
-                        brandAccentColor: value,
-                      }));
-                      void updateProposalBranding(proposal.id, {
-                        ...branding,
-                        brandAccentColor: value,
-                      });
-                    }}
-                    className="h-10 w-full rounded-lg border border-input bg-background px-1"
-                  />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label htmlFor="customer_signature_name" className={labelClassName}>
+                      Customer signature name
+                    </label>
+                    <input
+                      id="customer_signature_name"
+                      value={state.customer_signature_name}
+                      onChange={(e) =>
+                        updateField("customer_signature_name", e.target.value)
+                      }
+                      className={inputClassName}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="customer_signature_title" className={labelClassName}>
+                      Customer signature title
+                    </label>
+                    <input
+                      id="customer_signature_title"
+                      value={state.customer_signature_title}
+                      onChange={(e) =>
+                        updateField("customer_signature_title", e.target.value)
+                      }
+                      className={inputClassName}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="contractor_signature_name" className={labelClassName}>
+                      Contractor signature name
+                    </label>
+                    <input
+                      id="contractor_signature_name"
+                      value={state.contractor_signature_name}
+                      onChange={(e) =>
+                        updateField("contractor_signature_name", e.target.value)
+                      }
+                      className={inputClassName}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="contractor_signature_title" className={labelClassName}>
+                      Contractor signature title
+                    </label>
+                    <input
+                      id="contractor_signature_title"
+                      value={state.contractor_signature_title}
+                      onChange={(e) =>
+                        updateField("contractor_signature_title", e.target.value)
+                      }
+                      className={inputClassName}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            </details>
 
             <ProposalMediaEditor
               proposalId={proposal.id}
@@ -701,6 +665,51 @@ export function ProposalEditor({ proposal, media }: ProposalEditorProps) {
         </div>
       )}
 
+      <details className="group rounded-2xl border border-border bg-card shadow-sm">
+        <summary className="cursor-pointer list-none px-6 py-4 text-sm font-semibold marker:content-none [&::-webkit-details-marker]:hidden">
+          Customer engagement
+        </summary>
+        <div className="space-y-6 border-t border-border px-6 py-6">
+          <ProposalAnalyticsPanel detail={profile.analytics} />
+          <ProposalSignaturePanel
+            proposal={proposal}
+            viewCount={profile.analytics.viewCount}
+          />
+          <ProposalActivityTimeline events={profile.activity} />
+        </div>
+      </details>
+
+      {canEdit && insights.length === 0 ? (
+        <details className="group rounded-2xl border border-border bg-card shadow-sm">
+          <summary className="cursor-pointer list-none px-6 py-4 text-sm font-semibold marker:content-none [&::-webkit-details-marker]:hidden">
+            Readiness review
+          </summary>
+          <div className="border-t border-border px-6 py-6">
+            <AiProposalReviewCard state={state} onFocusField={focusProposalField} />
+          </div>
+        </details>
+      ) : null}
+
+      <ProposalBuilderOverflowMenu
+        open={overflowOpen}
+        onClose={() => setOverflowOpen(false)}
+        pending={pending}
+        canEdit={canEdit}
+        projectHref={`/projects/${proposal.project.id}`}
+        estimateHref={proposal.estimate ? `/estimates/${proposal.estimate.id}` : null}
+        portalHref={proposal.public_token ? `/p/${proposal.public_token}` : null}
+        pdfHref={`/proposals/${proposal.id}/pdf`}
+        onSave={handleSave}
+        onAssistant={() => setAssistantOpen(true)}
+        onWorkflow={() => setWorkflowOpen(true)}
+        onPrint={handlePrint}
+        onDuplicate={handleDuplicate}
+        onArchive={handleArchive}
+        onDelete={handleDelete}
+        canMarkAccepted={canMarkAccepted}
+        onMarkAccepted={handleMarkAccepted}
+      />
+
       <ProposalAssistantPanel
         open={assistantOpen && canEdit}
         onClose={() => setAssistantOpen(false)}
@@ -721,6 +730,7 @@ export function ProposalEditor({ proposal, media }: ProposalEditorProps) {
         onClose={() => setSendOpen(false)}
         proposalId={proposal.id}
         proposalTitle={state.title || proposal.title}
+        proposalContent={state}
       />
 
       <ProposalWorkflowPanel

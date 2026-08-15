@@ -1,0 +1,187 @@
+{
+  "passed": 22,
+  "failed": 5,
+  "warnings": 2,
+  "checklist": [
+    {
+      "id": "env:NEXT_PUBLIC_SUPABASE_URL",
+      "label": "NEXT_PUBLIC_SUPABASE_URL",
+      "status": "PASS",
+      "evidence": "set"
+    },
+    {
+      "id": "env:NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "label": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "status": "PASS",
+      "evidence": "set"
+    },
+    {
+      "id": "env:NEXT_PUBLIC_SITE_URL",
+      "label": "NEXT_PUBLIC_SITE_URL (production)",
+      "status": "PASS",
+      "evidence": "set"
+    },
+    {
+      "id": "env:SUPABASE_SERVICE_ROLE_KEY",
+      "label": "SUPABASE_SERVICE_ROLE_KEY (production)",
+      "status": "PASS",
+      "evidence": "set"
+    },
+    {
+      "id": "env:STRIPE_SECRET_KEY",
+      "label": "STRIPE_SECRET_KEY (production)",
+      "status": "FAIL",
+      "evidence": "missing",
+      "fix": "Set STRIPE_SECRET_KEY on Vercel"
+    },
+    {
+      "id": "env:STRIPE_WEBHOOK_SECRET",
+      "label": "STRIPE_WEBHOOK_SECRET (production)",
+      "status": "FAIL",
+      "evidence": "missing",
+      "fix": "Set STRIPE_WEBHOOK_SECRET on Vercel"
+    },
+    {
+      "id": "env:STRIPE_PRICE_ID",
+      "label": "STRIPE_PRICE_ID (production)",
+      "status": "FAIL",
+      "evidence": "missing",
+      "fix": "Set STRIPE_PRICE_ID on Vercel"
+    },
+    {
+      "id": "env:RESEND_API_KEY",
+      "label": "RESEND_API_KEY (production)",
+      "status": "PASS",
+      "evidence": "set"
+    },
+    {
+      "id": "env:resend-domain",
+      "label": "Resend from address",
+      "status": "WARN",
+      "evidence": "Using default sandbox — set RESEND_FROM_EMAIL to a verified domain before beta"
+    },
+    {
+      "id": "env:site-url",
+      "label": "Production site URL configured",
+      "status": "PASS",
+      "evidence": "https://voltpilot-vert.vercel.app"
+    },
+    {
+      "id": "env:example",
+      "label": ".env.example committed",
+      "status": "PASS",
+      "evidence": "present"
+    },
+    {
+      "id": "build",
+      "label": "npm run build",
+      "status": "PASS",
+      "evidence": "skipped"
+    },
+    {
+      "id": "lint",
+      "label": "npm run lint",
+      "status": "PASS",
+      "evidence": "exit 0"
+    },
+    {
+      "id": "legal:/privacy",
+      "label": "/privacy page exists",
+      "status": "PASS",
+      "evidence": "/Users/evagerba/Voltpilot-Ai/app/privacy/page.tsx"
+    },
+    {
+      "id": "legal:/terms",
+      "label": "/terms page exists",
+      "status": "PASS",
+      "evidence": "/Users/evagerba/Voltpilot-Ai/app/terms/page.tsx"
+    },
+    {
+      "id": "reliability:app/global-error.tsx",
+      "label": "app/global-error.tsx",
+      "status": "PASS",
+      "evidence": "present"
+    },
+    {
+      "id": "reliability:app/error.tsx",
+      "label": "app/error.tsx",
+      "status": "PASS",
+      "evidence": "present"
+    },
+    {
+      "id": "reliability:lib/observability/logger.ts",
+      "label": "lib/observability/logger.ts",
+      "status": "PASS",
+      "evidence": "present"
+    },
+    {
+      "id": "reliability:lib/observability/capture-exception.ts",
+      "label": "lib/observability/capture-exception.ts",
+      "status": "PASS",
+      "evidence": "present"
+    },
+    {
+      "id": "reliability:sentry",
+      "label": "Sentry DSN",
+      "status": "WARN",
+      "evidence": "not set — add SENTRY_DSN before beta"
+    },
+    {
+      "id": "remote:base",
+      "label": "Production base URL",
+      "status": "PASS",
+      "evidence": "https://voltpilot-vert.vercel.app"
+    },
+    {
+      "id": "remote:/api/health",
+      "label": "Health endpoint responds",
+      "status": "PASS",
+      "evidence": "HTTP 503"
+    },
+    {
+      "id": "remote:/subscribe",
+      "label": "Subscribe page loads",
+      "status": "PASS",
+      "evidence": "HTTP 200"
+    },
+    {
+      "id": "remote:/login",
+      "label": "Login page loads",
+      "status": "PASS",
+      "evidence": "HTTP 200"
+    },
+    {
+      "id": "remote:/privacy",
+      "label": "Privacy page loads",
+      "status": "PASS",
+      "evidence": "HTTP 200"
+    },
+    {
+      "id": "remote:/terms",
+      "label": "Terms page loads",
+      "status": "PASS",
+      "evidence": "HTTP 200"
+    },
+    {
+      "id": "remote:/auth/callback",
+      "label": "Auth callback route exists",
+      "status": "PASS",
+      "evidence": "HTTP 307"
+    },
+    {
+      "id": "remote:stripe-webhook",
+      "label": "Stripe webhook configured",
+      "status": "FAIL",
+      "evidence": "returns 503 — STRIPE_WEBHOOK_SECRET or STRIPE_SECRET_KEY missing on production",
+      "fix": null
+    },
+    {
+      "id": "remote:health-ok",
+      "label": "Production health status ok",
+      "status": "FAIL",
+      "evidence": "status=degraded checks={\"env\":true,\"supabase\":true,\"siteUrl\":true,\"siteUrlNotLocalhost\":true,\"openai\":true,\"resend\":true,\"resendDomain\":false,\"stripe\":false,\"stripeWebhook\":false,\"supabaseAdmin\":true,\"sentry\":false}",
+      "fix": "Fix missing production env vars on Vercel"
+    }
+  ],
+  "at": "2026-08-15T01:27:36.846Z"
+}

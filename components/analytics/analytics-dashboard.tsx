@@ -20,6 +20,7 @@ import {
 import {
   Bot,
   CircleDollarSign,
+  FolderKanban,
   Percent,
   PencilLine,
   Send,
@@ -29,6 +30,7 @@ import {
 } from "lucide-react";
 
 import { AiBusinessCoachCard } from "@/components/analytics/ai-business-coach-card";
+import { AnalyticsChartFrame } from "@/components/analytics/analytics-chart-frame";
 import { AnalyticsExecutiveOverview } from "@/components/analytics/analytics-executive-overview";
 import { AnalyticsFiltersBar } from "@/components/analytics/analytics-filters-bar";
 import { AnalyticsAiSummary } from "@/components/analytics/analytics-ai-summary";
@@ -37,14 +39,22 @@ import {
   CountTooltip,
   CurrencyTooltip,
   PercentTooltip,
+  PipelineTooltip,
 } from "@/components/analytics/analytics-chart-tooltips";
+import { AnalyticsKpiCard } from "@/components/analytics/analytics-kpi-card";
 import { ChartCard } from "@/components/analytics/chart-card";
 import { CustomerIntelligenceCard } from "@/components/analytics/customer-intelligence-card";
 import { EstimateIntelligenceCard } from "@/components/analytics/estimate-intelligence-card";
 import { ProposalIntelligenceCard } from "@/components/analytics/proposal-intelligence-card";
 import { ProfitForecastCard } from "@/components/analytics/profit-forecast-card";
 import { RevenueForecastCard } from "@/components/analytics/revenue-forecast-card";
-import { StatCard } from "@/components/dashboard/stat-card";
+import {
+  CHART_ANIMATION,
+  CHART_AXIS,
+  CHART_COLORS,
+  CHART_GRID,
+  CHART_MARGINS,
+} from "@/lib/analytics/chart-theme";
 import {
   formatCurrency,
   formatPercent,
@@ -64,6 +74,7 @@ type AnalyticsDashboardProps = {
   projects: ProjectFilterOption[];
   activeSection: AnalyticsSection;
   precomputed: PrecomputedAnalyticsViewModels;
+  compareEnabled: boolean;
 };
 
 function DrillDownLink({
@@ -138,6 +149,7 @@ export function AnalyticsDashboard({
   projects,
   activeSection,
   precomputed,
+  compareEnabled,
 }: AnalyticsDashboardProps) {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
@@ -151,7 +163,8 @@ export function AnalyticsDashboard({
     };
   }, []);
 
-  const { analytics, forecasts, aiInsights, pipelineWithColor } = precomputed;
+  const { analytics, forecasts, aiInsights, pipelineWithColor, comparisons } =
+    precomputed;
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -173,11 +186,16 @@ export function AnalyticsDashboard({
         projects={projects}
         activeSection={activeSection}
         refreshing={refreshing}
+        compareEnabled={compareEnabled}
         onRefresh={handleRefresh}
       />
 
       {activeSection === "executive" ? (
-        <AnalyticsExecutiveOverview data={data} precomputed={precomputed} />
+        <AnalyticsExecutiveOverview
+          data={data}
+          precomputed={precomputed}
+          compareEnabled={compareEnabled}
+        />
       ) : null}
 
       {activeSection === "estimating" ? (
@@ -185,29 +203,45 @@ export function AnalyticsDashboard({
           <EstimateIntelligenceCard intelligence={analytics.estimateIntelligence} />
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
+            <AnalyticsKpiCard
+              index={0}
               title="Estimate accuracy"
               value={formatPercent(data.estimating.estimateAccuracyPercent)}
-              change="Version-to-version variance"
+              subtitle="Version-to-version variance"
+              tooltip="How closely revised estimate totals match prior versions."
               icon={Percent}
+              comparison={comparisons.estimating.estimateAccuracyPercent}
+              compareEnabled={compareEnabled}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={1}
               title="Cost variance"
               value={formatPercent(data.estimating.costVariancePercent)}
-              change={`Est ${formatCurrency(data.estimating.estimatedTotal)} · Act ${formatCurrency(data.estimating.actualTotal)}`}
+              subtitle={`Est ${formatCurrency(data.estimating.estimatedTotal)} · Act ${formatCurrency(data.estimating.actualTotal)}`}
+              tooltip="Difference between estimated and actual job costs."
               icon={TrendingUp}
+              comparison={comparisons.estimating.costVariancePercent}
+              compareEnabled={compareEnabled}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={2}
               title="Labor utilization"
               value={formatPercent(data.estimating.laborUtilizationPercent)}
-              change="Labor share of direct costs"
+              subtitle="Labor share of direct costs"
+              tooltip="Labor costs as a percentage of total direct costs."
               icon={Users}
+              comparison={comparisons.estimating.laborUtilizationPercent}
+              compareEnabled={compareEnabled}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={3}
               title="Change orders"
               value={String(data.estimating.changeOrderCount)}
-              change={`${data.estimating.costOverrunCount} cost overruns`}
+              subtitle={`${data.estimating.costOverrunCount} cost overruns`}
+              tooltip="Change orders recorded against job actuals."
               icon={PencilLine}
+              comparison={comparisons.estimating.changeOrderCount}
+              compareEnabled={compareEnabled}
             />
           </div>
 
@@ -216,34 +250,34 @@ export function AnalyticsDashboard({
               title="Material cost trends"
               description="Monthly material spend across filtered estimates."
             >
-              <div className="h-72">
+              <AnalyticsChartFrame>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.estimating.materialCostTrend}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <Tooltip content={<CurrencyTooltip />} />
-                    <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+                  <LineChart data={data.estimating.materialCostTrend} margin={CHART_MARGINS.default}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="label" {...CHART_AXIS} />
+                    <YAxis {...CHART_AXIS} width={48} />
+                    <Tooltip content={<CurrencyTooltip />} cursor={{ stroke: CHART_COLORS.material, strokeOpacity: 0.2 }} />
+                    <Line type="monotone" dataKey="value" stroke={CHART_COLORS.material} strokeWidth={2.5} dot={{ r: 3, fill: CHART_COLORS.material }} {...CHART_ANIMATION} />
                   </LineChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
 
             <ChartCard
               title="Equipment cost trends"
               description="Monthly equipment spend across filtered estimates."
             >
-              <div className="h-72">
+              <AnalyticsChartFrame>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.estimating.equipmentCostTrend}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <Tooltip content={<CurrencyTooltip />} />
-                    <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} />
+                  <LineChart data={data.estimating.equipmentCostTrend} margin={CHART_MARGINS.default}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="label" {...CHART_AXIS} />
+                    <YAxis {...CHART_AXIS} width={48} />
+                    <Tooltip content={<CurrencyTooltip />} cursor={{ stroke: CHART_COLORS.equipment, strokeOpacity: 0.2 }} />
+                    <Line type="monotone" dataKey="value" stroke={CHART_COLORS.equipment} strokeWidth={2.5} dot={{ r: 3, fill: CHART_COLORS.equipment }} {...CHART_ANIMATION} />
                   </LineChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
           </div>
 
@@ -274,48 +308,69 @@ export function AnalyticsDashboard({
           <ProposalIntelligenceCard intelligence={analytics.proposalIntelligence} />
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
+            <AnalyticsKpiCard
+              index={0}
               title="Acceptance rate"
               value={formatPercent(data.proposals.acceptanceRate)}
-              change={`${data.proposals.totalDecided} decided`}
-              changeType={data.proposals.acceptanceRate >= 40 ? "positive" : "neutral"}
+              subtitle={`${data.proposals.totalDecided} decided`}
+              tooltip="Share of decided proposals that were accepted."
               icon={Percent}
+              comparison={comparisons.proposals.acceptanceRate}
+              compareEnabled={compareEnabled}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={1}
               title="Decline rate"
               value={formatPercent(data.proposals.declineRate)}
+              tooltip="Share of decided proposals that were declined."
               icon={Percent}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={2}
               title="Avg sales cycle"
               value={`${data.proposals.averageSalesCycleDays.toFixed(1)}d`}
-              change="Sent to decision"
+              subtitle="Sent to decision"
+              tooltip="Average days from proposal sent to customer decision."
               icon={Send}
+              comparison={comparisons.proposals.averageSalesCycleDays}
+              compareEnabled={compareEnabled}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={3}
               title="Avg proposal value"
               value={formatCurrency(data.proposals.averageProposalValue)}
+              tooltip="Mean value of proposals in the selected period."
               icon={CircleDollarSign}
+              comparison={comparisons.proposals.averageProposalValue}
+              compareEnabled={compareEnabled}
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard
+            <AnalyticsKpiCard
+              index={4}
               title="Revenue won"
               value={formatCurrency(data.proposals.revenueWon)}
-              changeType="positive"
+              tooltip="Total revenue from accepted proposals."
               icon={TrendingUp}
+              comparison={comparisons.proposals.revenueWon}
+              compareEnabled={compareEnabled}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={5}
               title="Revenue lost"
               value={formatCurrency(data.proposals.revenueLost)}
-              changeType={data.proposals.revenueLost > 0 ? "negative" : "neutral"}
+              tooltip="Total value of declined proposals."
               icon={CircleDollarSign}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={6}
               title="Proposals sent"
               value={String(data.proposals.totalSent)}
+              tooltip="Proposals sent to customers during this period."
               icon={Send}
+              comparison={comparisons.proposals.totalSent}
+              compareEnabled={compareEnabled}
             />
           </div>
 
@@ -323,17 +378,17 @@ export function AnalyticsDashboard({
             title="Proposal volume"
             description="Proposals created over the selected period."
           >
-            <div className="h-72">
+            <AnalyticsChartFrame>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.proposals.proposalVolumeTrend}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                  <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <Tooltip content={<CountTooltip suffix="proposals" />} />
-                  <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                <BarChart data={data.proposals.proposalVolumeTrend} margin={CHART_MARGINS.default}>
+                  <CartesianGrid {...CHART_GRID} />
+                  <XAxis dataKey="label" {...CHART_AXIS} />
+                  <YAxis allowDecimals={false} {...CHART_AXIS} width={32} />
+                  <Tooltip content={<CountTooltip suffix="proposals" />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                  <Bar dataKey="count" fill={CHART_COLORS.proposals} radius={[6, 6, 0, 0]} {...CHART_ANIMATION} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </AnalyticsChartFrame>
           </ChartCard>
         </>
       ) : null}
@@ -343,26 +398,40 @@ export function AnalyticsDashboard({
           <CustomerIntelligenceCard intelligence={analytics.customerIntelligence} />
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
+            <AnalyticsKpiCard
+              index={0}
               title="Repeat customer rate"
               value={formatPercent(data.customers.repeatCustomerRate)}
+              tooltip="Customers with more than one project in your portfolio."
               icon={Users}
+              comparison={comparisons.customers.repeatCustomerRate}
+              compareEnabled={compareEnabled}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={1}
               title="Avg customer value"
               value={formatCurrency(data.customers.averageCustomerValue)}
+              tooltip="Average revenue per customer in the selected period."
               icon={CircleDollarSign}
+              comparison={comparisons.customers.averageCustomerValue}
+              compareEnabled={compareEnabled}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={2}
               title="Customer lifetime value"
               value={formatCurrency(data.customers.customerLifetimeValue)}
-              change="Avg value × avg projects per customer"
+              subtitle="Avg value × avg projects per customer"
+              tooltip="Estimated lifetime value based on average project count and revenue."
               icon={TrendingUp}
+              comparison={comparisons.customers.customerLifetimeValue}
+              compareEnabled={compareEnabled}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={3}
               title="Top customers"
               value={String(data.customers.topCustomers.length)}
-              change="In selected period"
+              subtitle="In selected period"
+              tooltip="Number of customers ranked in the top revenue list."
               icon={Users}
             />
           </div>
@@ -372,34 +441,34 @@ export function AnalyticsDashboard({
               title="Customer growth"
               description="New customers added over time."
             >
-              <div className="h-72">
+              <AnalyticsChartFrame>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.customers.customerGrowthTrend}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <Tooltip content={<CountTooltip suffix="customers" />} />
-                    <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <BarChart data={data.customers.customerGrowthTrend} margin={CHART_MARGINS.default}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="label" {...CHART_AXIS} />
+                    <YAxis allowDecimals={false} {...CHART_AXIS} width={32} />
+                    <Tooltip content={<CountTooltip suffix="customers" />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                    <Bar dataKey="count" fill={CHART_COLORS.customers} radius={[6, 6, 0, 0]} {...CHART_ANIMATION} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
 
             <ChartCard
               title="Revenue by customer"
               description="Top customers by revenue contribution."
             >
-              <div className="h-72">
+              <AnalyticsChartFrame>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.customers.revenueByCustomer} layout="vertical" margin={{ left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis type="number" tick={{ fontSize: 12 }} />
-                    <YAxis type="category" dataKey="companyName" width={100} tick={{ fontSize: 11 }} />
-                    <Tooltip content={<CurrencyTooltip />} />
-                    <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                  <BarChart data={data.customers.revenueByCustomer} layout="vertical" margin={{ ...CHART_MARGINS.verticalBar, left: 20 }}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis type="number" {...CHART_AXIS} />
+                    <YAxis type="category" dataKey="companyName" width={100} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                    <Tooltip content={<CurrencyTooltip />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                    <Bar dataKey="revenue" fill={CHART_COLORS.revenue} radius={[0, 6, 6, 0]} {...CHART_ANIMATION} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
           </div>
 
@@ -434,33 +503,97 @@ export function AnalyticsDashboard({
 
       {activeSection === "projects" ? (
         <>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <AnalyticsKpiCard
+              index={0}
+              title="Total projects"
+              value={String(
+                data.projects.projectsByStatus.reduce(
+                  (sum, stage) => sum + stage.count,
+                  0
+                )
+              )}
+              subtitle="Across all statuses"
+              tooltip="Total number of projects matching your filters."
+              icon={FolderKanban}
+              comparison={comparisons.projects.totalProjects}
+              compareEnabled={compareEnabled}
+            />
+            <AnalyticsKpiCard
+              index={1}
+              title="Awarded projects"
+              value={String(
+                data.projects.projectsByStatus.find(
+                  (stage) => stage.status === "Awarded"
+                )?.count ?? 0
+              )}
+              subtitle="Won work in pipeline"
+              tooltip="Projects currently in Awarded status."
+              icon={TrendingUp}
+              comparison={comparisons.projects.awardedCount}
+              compareEnabled={compareEnabled}
+            />
+            <AnalyticsKpiCard
+              index={2}
+              title="Avg project margin"
+              value={formatPercent(
+                data.projects.profitabilityByProject.length > 0
+                  ? data.projects.profitabilityByProject.reduce(
+                      (sum, project) => sum + project.marginPercent,
+                      0
+                    ) / data.projects.profitabilityByProject.length
+                  : 0
+              )}
+              subtitle="From profitability data"
+              tooltip="Average gross margin across projects with profitability records."
+              icon={Percent}
+              comparison={comparisons.projects.averageMargin}
+              compareEnabled={compareEnabled}
+            />
+            <AnalyticsKpiCard
+              index={3}
+              title="Project revenue"
+              value={formatCurrency(
+                data.projects.revenueByProject.reduce(
+                  (sum, project) => sum + project.revenue,
+                  0
+                )
+              )}
+              subtitle="Accepted proposal revenue"
+              tooltip="Total revenue attributed to projects in this period."
+              icon={CircleDollarSign}
+              comparison={comparisons.projects.totalRevenue}
+              compareEnabled={compareEnabled}
+            />
+          </div>
+
           <div className="grid gap-6 xl:grid-cols-2">
             <ChartCard
               title="Projects by status"
               description="Pipeline distribution for filtered projects."
             >
-              <div className="h-80">
+              <AnalyticsChartFrame height="lg">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={pipelineWithColor} layout="vertical" margin={{ left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-                    <YAxis type="category" dataKey="status" width={90} tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                  <BarChart data={pipelineWithColor} layout="vertical" margin={{ ...CHART_MARGINS.verticalBar, left: 20 }}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis type="number" allowDecimals={false} {...CHART_AXIS} />
+                    <YAxis type="category" dataKey="status" width={90} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                    <Tooltip content={<PipelineTooltip />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]} {...CHART_ANIMATION}>
                       {pipelineWithColor.map((entry) => (
                         <Cell key={entry.status} fill={entry.fill} />
                       ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
 
             <ChartCard
               title="Status distribution"
               description="Share of projects by current status."
             >
-              <div className="h-80">
+              <AnalyticsChartFrame height="lg">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -472,6 +605,7 @@ export function AnalyticsDashboard({
                       innerRadius={55}
                       outerRadius={95}
                       paddingAngle={3}
+                      {...CHART_ANIMATION}
                     >
                       {pipelineWithColor
                         .filter((stage) => stage.count > 0)
@@ -479,10 +613,10 @@ export function AnalyticsDashboard({
                           <Cell key={entry.status} fill={entry.fill} />
                         ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip content={<PipelineTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
           </div>
 
@@ -582,40 +716,59 @@ export function AnalyticsDashboard({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
+            <AnalyticsKpiCard
+              index={0}
               title="AI-assisted estimates"
               value={String(data.ai.aiGeneratedEstimates)}
+              tooltip="Estimates where the AI assistant contributed during creation."
               icon={Bot}
+              comparison={comparisons.ai.aiGeneratedEstimates}
+              compareEnabled={compareEnabled}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={1}
               title="AI adoption rate"
               value={formatPercent(data.ai.aiAdoptionRate)}
+              tooltip="Percentage of estimates that used AI assistance."
               icon={Sparkles}
+              comparison={comparisons.ai.aiAdoptionRate}
+              compareEnabled={compareEnabled}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={2}
               title="Time saved"
               value={`${data.ai.estimatedTimeSavedHours.toFixed(1)}h`}
-              change="AI completion delta + session time"
-              changeType="positive"
+              subtitle="AI completion delta + session time"
+              tooltip="Estimated hours saved through AI-assisted estimating."
               icon={TrendingUp}
+              comparison={comparisons.ai.estimatedTimeSavedHours}
+              compareEnabled={compareEnabled}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={3}
               title="Recommendation acceptance"
               value={formatPercent(data.ai.recommendationAcceptanceRate)}
+              tooltip="Rate at which AI recommendations were applied by estimators."
               icon={Percent}
+              comparison={comparisons.ai.recommendationAcceptanceRate}
+              compareEnabled={compareEnabled}
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <StatCard
+            <AnalyticsKpiCard
+              index={4}
               title="Avg estimate completion"
               value={`${data.ai.averageEstimateCompletionHours.toFixed(1)}h`}
-              change="Creation to final update"
+              subtitle="Creation to final update"
+              tooltip="Average time from estimate creation to last update."
               icon={PencilLine}
             />
-            <StatCard
+            <AnalyticsKpiCard
+              index={5}
               title="Active estimators using AI"
               value={String(data.ai.usageByEstimator.length)}
+              tooltip="Team members with AI assistant sessions in this period."
               icon={Users}
             />
           </div>
@@ -642,134 +795,134 @@ export function AnalyticsDashboard({
         <>
           <div className="grid gap-6 xl:grid-cols-2">
             <ChartCard title="Revenue trends" description="Estimated selling price over time.">
-              <div className="h-72">
+              <AnalyticsChartFrame>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.charts.revenueTrend}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <Tooltip content={<CurrencyTooltip />} />
-                    <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+                  <LineChart data={data.charts.revenueTrend} margin={CHART_MARGINS.default}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="label" {...CHART_AXIS} />
+                    <YAxis {...CHART_AXIS} width={48} />
+                    <Tooltip content={<CurrencyTooltip />} cursor={{ stroke: CHART_COLORS.revenue, strokeOpacity: 0.2 }} />
+                    <Line type="monotone" dataKey="value" stroke={CHART_COLORS.revenue} strokeWidth={2.5} dot={{ r: 3, fill: CHART_COLORS.revenue }} {...CHART_ANIMATION} />
                   </LineChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
 
             <ChartCard title="Profit trends" description="Gross profit from estimates over time.">
-              <div className="h-72">
+              <AnalyticsChartFrame>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.charts.profitTrend}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <Tooltip content={<CurrencyTooltip />} />
-                    <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                  <LineChart data={data.charts.profitTrend} margin={CHART_MARGINS.default}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="label" {...CHART_AXIS} />
+                    <YAxis {...CHART_AXIS} width={48} />
+                    <Tooltip content={<CurrencyTooltip />} cursor={{ stroke: CHART_COLORS.profit, strokeOpacity: 0.2 }} />
+                    <Line type="monotone" dataKey="value" stroke={CHART_COLORS.profit} strokeWidth={2.5} dot={{ r: 3, fill: CHART_COLORS.profit }} {...CHART_ANIMATION} />
                   </LineChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
           </div>
 
           <div className="grid gap-6 xl:grid-cols-2">
             <ChartCard title="Win rate trends" description="Proposal win rate by period.">
-              <div className="h-72">
+              <AnalyticsChartFrame>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.charts.winRateTrend}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <Tooltip content={<PercentTooltip />} />
-                    <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+                  <LineChart data={data.charts.winRateTrend} margin={CHART_MARGINS.default}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="label" {...CHART_AXIS} />
+                    <YAxis {...CHART_AXIS} width={40} />
+                    <Tooltip content={<PercentTooltip />} cursor={{ stroke: CHART_COLORS.winRate, strokeOpacity: 0.2 }} />
+                    <Line type="monotone" dataKey="value" stroke={CHART_COLORS.winRate} strokeWidth={2.5} dot={{ r: 4, fill: CHART_COLORS.winRate }} activeDot={{ r: 6 }} {...CHART_ANIMATION} />
                   </LineChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
 
             <ChartCard title="Estimate volume" description="Estimates created over time.">
-              <div className="h-72">
+              <AnalyticsChartFrame>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.charts.estimateVolumeTrend}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <Tooltip content={<CountTooltip suffix="estimates" />} />
-                    <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                  <BarChart data={data.charts.estimateVolumeTrend} margin={CHART_MARGINS.default}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="label" {...CHART_AXIS} />
+                    <YAxis allowDecimals={false} {...CHART_AXIS} width={32} />
+                    <Tooltip content={<CountTooltip suffix="estimates" />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                    <Bar dataKey="count" fill={CHART_COLORS.estimates} radius={[6, 6, 0, 0]} {...CHART_ANIMATION} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
           </div>
 
           <div className="grid gap-6 xl:grid-cols-2">
             <ChartCard title="Proposal volume" description="Proposals created over time.">
-              <div className="h-72">
+              <AnalyticsChartFrame>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.charts.proposalVolumeTrend}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <Tooltip content={<CountTooltip suffix="proposals" />} />
-                    <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                  <BarChart data={data.charts.proposalVolumeTrend} margin={CHART_MARGINS.default}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="label" {...CHART_AXIS} />
+                    <YAxis allowDecimals={false} {...CHART_AXIS} width={32} />
+                    <Tooltip content={<CountTooltip suffix="proposals" />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                    <Bar dataKey="count" fill={CHART_COLORS.proposals} radius={[6, 6, 0, 0]} {...CHART_ANIMATION} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
 
             <ChartCard title="Customer growth" description="New customers added over time.">
-              <div className="h-72">
+              <AnalyticsChartFrame>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.charts.customerGrowthTrend}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <Tooltip content={<CountTooltip suffix="customers" />} />
-                    <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <BarChart data={data.charts.customerGrowthTrend} margin={CHART_MARGINS.default}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="label" {...CHART_AXIS} />
+                    <YAxis allowDecimals={false} {...CHART_AXIS} width={32} />
+                    <Tooltip content={<CountTooltip suffix="customers" />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                    <Bar dataKey="count" fill={CHART_COLORS.customers} radius={[6, 6, 0, 0]} {...CHART_ANIMATION} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
           </div>
 
           <div className="grid gap-6 xl:grid-cols-2">
             <ChartCard title="Project pipeline" description="Projects and value by status.">
-              <div className="h-72">
+              <AnalyticsChartFrame>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={pipelineWithColor}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis dataKey="status" tick={{ fontSize: 12 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Bar dataKey="count">
+                  <BarChart data={pipelineWithColor} margin={CHART_MARGINS.default}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="status" {...CHART_AXIS} />
+                    <YAxis allowDecimals={false} {...CHART_AXIS} width={32} />
+                    <Tooltip content={<PipelineTooltip />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]} {...CHART_ANIMATION}>
                       {pipelineWithColor.map((entry) => (
                         <Cell key={entry.status} fill={entry.fill} />
                       ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
 
             <ChartCard
               title="Monthly recurring revenue"
               description="Projected MRR from awarded projects (value ÷ 12)."
             >
-              <div className="mb-4 rounded-lg bg-muted/40 px-4 py-3">
+              <div className="mb-4 rounded-xl border border-primary/15 bg-gradient-to-br from-primary/5 to-transparent px-4 py-3">
                 <p className="text-sm text-muted-foreground">Current projected MRR</p>
-                <p className="text-2xl font-bold">
+                <p className="text-2xl font-bold tabular-nums">
                   {formatCurrency(data.charts.monthlyRecurringRevenue)}
                 </p>
               </div>
-              <div className="h-56">
+              <AnalyticsChartFrame height="sm">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.charts.mrrTrend}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <Tooltip content={<CurrencyTooltip />} />
-                    <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} />
+                  <LineChart data={data.charts.mrrTrend} margin={CHART_MARGINS.default}>
+                    <CartesianGrid {...CHART_GRID} />
+                    <XAxis dataKey="label" {...CHART_AXIS} />
+                    <YAxis {...CHART_AXIS} width={48} />
+                    <Tooltip content={<CurrencyTooltip />} cursor={{ stroke: CHART_COLORS.mrr, strokeOpacity: 0.2 }} />
+                    <Line type="monotone" dataKey="value" stroke={CHART_COLORS.mrr} strokeWidth={2.5} dot={{ r: 3, fill: CHART_COLORS.mrr }} {...CHART_ANIMATION} />
                   </LineChart>
                 </ResponsiveContainer>
-              </div>
+              </AnalyticsChartFrame>
             </ChartCard>
           </div>
         </>

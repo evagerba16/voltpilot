@@ -55,10 +55,10 @@ function buildNotificationCopy(
           context.comment ?
             `Customer comment: ${context.comment}`
           : "The customer signed electronically in the proposal portal.",
-          "Review next steps and move the project forward.",
+          "Start job costing to track this project against the bid.",
         ].join("\n"),
-        ctaLabel: "View accepted proposal",
-        ctaUrl: context.dashboardUrl,
+        ctaLabel: "Start Job Costing",
+        ctaUrl: `${getSiteUrl()}/projects/${proposal.project.id}?tab=job-costing`,
         companyName,
       };
     case "rejected":
@@ -117,4 +117,8 @@ export async function notifyContractorOfProposalEvent(
 
 export function buildProposalDashboardUrl(proposalId: string) {
   return `${getSiteUrl()}/proposals/${proposalId}`;
+}
+
+export function buildProjectJobCostingUrl(projectId: string) {
+  return `${getSiteUrl()}/projects/${projectId}?tab=job-costing`;
 }

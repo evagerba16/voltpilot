@@ -1,11 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
   Line,
   LineChart,
@@ -17,22 +14,24 @@ import {
 import {
   BarChart3,
   LineChart as LineChartIcon,
-  Percent,
-  PencilLine,
 } from "lucide-react";
 
+import { AnalyticsChartFrame } from "@/components/analytics/analytics-chart-frame";
 import { AnalyticsEmptyState } from "@/components/analytics/analytics-empty-state";
 import {
-  CountTooltip,
   CurrencyTooltip,
   PercentTooltip,
 } from "@/components/analytics/analytics-chart-tooltips";
 import { ChartCard } from "@/components/analytics/chart-card";
 import {
-  deriveGrossMarginTrend,
-  hasCountSeries,
-  hasValueSeries,
-} from "@/lib/analytics/chart-helpers";
+  CHART_ANIMATION,
+  CHART_AXIS,
+  CHART_COLORS,
+  CHART_GRID,
+  CHART_MARGINS,
+  chartGradientId,
+} from "@/lib/analytics/chart-theme";
+import { hasValueSeries } from "@/lib/analytics/chart-helpers";
 import type { AnalyticsData } from "@/lib/analytics/types";
 
 type AnalyticsOverviewChartsProps = {
@@ -40,15 +39,9 @@ type AnalyticsOverviewChartsProps = {
 };
 
 export function AnalyticsOverviewCharts({ charts }: AnalyticsOverviewChartsProps) {
-  const grossMarginTrend = useMemo(
-    () => deriveGrossMarginTrend(charts.revenueTrend, charts.profitTrend),
-    [charts.revenueTrend, charts.profitTrend]
-  );
-
   const hasRevenue = hasValueSeries(charts.revenueTrend);
-  const hasEstimates = hasCountSeries(charts.estimateVolumeTrend);
   const hasWinRate = hasValueSeries(charts.winRateTrend);
-  const hasMarginTrend = hasValueSeries(grossMarginTrend);
+  const revenueGradient = chartGradientId("revenue");
 
   return (
     <section className="space-y-4">
@@ -57,8 +50,7 @@ export function AnalyticsOverviewCharts({ charts }: AnalyticsOverviewChartsProps
           Performance trends
         </h2>
         <p className="text-sm text-muted-foreground">
-          Interactive charts for revenue, estimating volume, conversion, and
-          margin over the selected period.
+          Revenue and win rate over the selected period.
         </p>
       </div>
 
@@ -69,29 +61,30 @@ export function AnalyticsOverviewCharts({ charts }: AnalyticsOverviewChartsProps
           icon={LineChartIcon}
         >
           {hasRevenue ? (
-            <div className="h-72">
+            <AnalyticsChartFrame>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={charts.revenueTrend}>
+                <AreaChart data={charts.revenueTrend} margin={CHART_MARGINS.default}>
                   <defs>
-                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    <linearGradient id={revenueGradient} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={CHART_COLORS.revenue} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={CHART_COLORS.revenue} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                  <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <Tooltip content={<CurrencyTooltip />} />
+                  <CartesianGrid {...CHART_GRID} />
+                  <XAxis dataKey="label" {...CHART_AXIS} />
+                  <YAxis {...CHART_AXIS} width={48} />
+                  <Tooltip content={<CurrencyTooltip />} cursor={{ stroke: CHART_COLORS.revenue, strokeOpacity: 0.2 }} />
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    fill="url(#revenueGradient)"
+                    stroke={CHART_COLORS.revenue}
+                    strokeWidth={2.5}
+                    fill={`url(#${revenueGradient})`}
+                    {...CHART_ANIMATION}
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
+            </AnalyticsChartFrame>
           ) : (
             <AnalyticsEmptyState
               icon={LineChartIcon}
@@ -104,57 +97,30 @@ export function AnalyticsOverviewCharts({ charts }: AnalyticsOverviewChartsProps
         </ChartCard>
 
         <ChartCard
-          title="Estimates created"
-          description="New estimates added during the selected period."
-          icon={PencilLine}
-        >
-          {hasEstimates ? (
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={charts.estimateVolumeTrend}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                  <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <Tooltip content={<CountTooltip suffix="estimates" />} />
-                  <Bar dataKey="count" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <AnalyticsEmptyState
-              icon={PencilLine}
-              title="No estimates in this period"
-              description="Start building estimates to track production volume and team throughput."
-              actionLabel="Create estimate"
-              actionHref="/estimates"
-            />
-          )}
-        </ChartCard>
-
-        <ChartCard
           title="Proposal conversion rate"
           description="Win rate across decided proposals by period."
           icon={BarChart3}
         >
           {hasWinRate ? (
-            <div className="h-72">
+            <AnalyticsChartFrame>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={charts.winRateTrend}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                  <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <Tooltip content={<PercentTooltip />} />
+                <LineChart data={charts.winRateTrend} margin={CHART_MARGINS.default}>
+                  <CartesianGrid {...CHART_GRID} />
+                  <XAxis dataKey="label" {...CHART_AXIS} />
+                  <YAxis {...CHART_AXIS} width={40} />
+                  <Tooltip content={<PercentTooltip />} cursor={{ stroke: CHART_COLORS.winRate, strokeOpacity: 0.2 }} />
                   <Line
                     type="monotone"
                     dataKey="value"
-                    stroke="#f59e0b"
+                    stroke={CHART_COLORS.winRate}
                     strokeWidth={2.5}
-                    dot={{ r: 4, fill: "#f59e0b" }}
-                    activeDot={{ r: 6 }}
+                    dot={{ r: 4, fill: CHART_COLORS.winRate, strokeWidth: 0 }}
+                    activeDot={{ r: 6, strokeWidth: 2, stroke: "hsl(var(--background))" }}
+                    {...CHART_ANIMATION}
                   />
                 </LineChart>
               </ResponsiveContainer>
-            </div>
+            </AnalyticsChartFrame>
           ) : (
             <AnalyticsEmptyState
               icon={BarChart3}
@@ -162,41 +128,6 @@ export function AnalyticsOverviewCharts({ charts }: AnalyticsOverviewChartsProps
               description="Send proposals and record acceptances to track your win rate over time."
               actionLabel="Create proposal"
               actionHref="/proposals"
-            />
-          )}
-        </ChartCard>
-
-        <ChartCard
-          title="Gross margin trends"
-          description="Margin percentage derived from estimate profit and revenue."
-          icon={Percent}
-        >
-          {hasMarginTrend ? (
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={grossMarginTrend}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                  <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <Tooltip content={<PercentTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#10b981"
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: "#10b981" }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <AnalyticsEmptyState
-              icon={Percent}
-              title="No margin trends yet"
-              description="Add cost and markup details to estimates to monitor gross margin performance."
-              actionLabel="Review estimates"
-              actionHref="/estimates"
             />
           )}
         </ChartCard>

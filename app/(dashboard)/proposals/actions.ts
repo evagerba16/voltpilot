@@ -35,6 +35,10 @@ import {
   recordProposalStatusChange,
 } from "@/lib/proposals/revisions";
 import { getProposalWorkflowSnapshot } from "@/lib/proposals/proposal-workflow-service";
+import {
+  markProposalAsAccepted,
+  updateProjectStatusAfterProposalAccepted,
+} from "@/lib/proposals/proposal-status-service";
 import { getEstimateById } from "@/lib/estimates/queries";
 import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/site-url";
@@ -658,5 +662,53 @@ export async function updateProposalBranding(
   }
 
   revalidatePath(`/proposals/${proposalId}`);
+  return { success: true };
+}
+
+const MANUAL_ACCEPT_STATUSES = new Set(["Sent", "Viewed"]);
+
+/** Record a verbal or in-person acceptance when the customer did not use the portal. */
+export async function markProposalAcceptedManually(proposalId: string) {
+  const context = await assertPermission("proposals.edit");
+  const proposal = await getProposalById(proposalId);
+
+  if (!proposal || proposal.organization_id !== context.organizationId) {
+    return { error: "Proposal was not found." };
+  }
+
+  if (proposal.status === "Accepted") {
+    return { error: "This proposal is already accepted." };
+  }
+
+  if (!MANUAL_ACCEPT_STATUSES.has(proposal.status)) {
+    return {
+      error: "Only sent or viewed proposals can be marked as accepted.",
+    };
+  }
+
+  try {
+    await markProposalAsAccepted(
+      proposal.id,
+      context.organizationId,
+      proposal.status,
+      {},
+      "Marked as accepted by contractor"
+    );
+
+    await updateProjectStatusAfterProposalAccepted(
+      proposal.project_id,
+      context.organizationId
+    );
+  } catch {
+    return {
+      error: "We couldn't mark this proposal as accepted. Try again in a moment.",
+    };
+  }
+
+  revalidatePath(`/proposals/${proposalId}`);
+  revalidatePath(`/projects/${proposal.project_id}`);
+  revalidatePath("/proposals");
+  revalidatePath("/projects");
+
   return { success: true };
 }

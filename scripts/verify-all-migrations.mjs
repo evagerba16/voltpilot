@@ -240,6 +240,49 @@ if (portalResponse.ok && portalResponse.body?.includes("signature is required"))
 }
 
 console.log("");
+console.log("018 Stripe subscriptions");
+record(
+  "018:organization_subscriptions",
+  "public.organization_subscriptions",
+  "018",
+  await probeTable("organization_subscriptions")
+);
+
+console.log("");
+console.log("019–020 Customer CRM");
+for (const table of ["customer_notes", "customer_documents"]) {
+  record(`019:${table}`, `public.${table}`, "019", await probeTable(table));
+}
+record(
+  "020:customers.status",
+  "customers.status column",
+  "020",
+  await probeColumns("customers", ["id", "status"])
+);
+record(
+  "020:customer_notes.is_pinned",
+  "customer_notes.is_pinned",
+  "020",
+  await probeColumns("customer_notes", ["id", "is_pinned"])
+);
+record(
+  "020:customer_documents.category",
+  "customer_documents.category",
+  "020",
+  await probeColumns("customer_documents", ["id", "category"])
+);
+
+console.log("");
+console.log("021 Job costing & field logs");
+for (const table of [
+  "project_change_orders",
+  "project_job_logs",
+  "project_job_log_photos",
+]) {
+  record(`021:${table}`, `public.${table}`, "021", await probeTable(table));
+}
+
+console.log("");
 const failed = results.filter((r) => r.status === "FAIL");
 console.log(`Summary: ${results.length - failed.length}/${results.length} passed, ${failed.length} failed`);
 

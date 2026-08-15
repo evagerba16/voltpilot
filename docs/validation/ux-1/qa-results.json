@@ -1,0 +1,111 @@
+{
+  "generatedAt": "2026-08-05T22:38:26.760Z",
+  "phase": "UX-1",
+  "checks": [
+    {
+      "id": "dashboard.no-daily-briefing",
+      "status": "PASS",
+      "detail": "Removed from home"
+    },
+    {
+      "id": "dashboard.no-copilot",
+      "status": "PASS",
+      "detail": "Removed from home"
+    },
+    {
+      "id": "dashboard.no-full-ai-panel",
+      "status": "PASS",
+      "detail": "Full panel removed"
+    },
+    {
+      "id": "dashboard.no-quick-actions",
+      "status": "PASS",
+      "detail": "Quick actions removed"
+    },
+    {
+      "id": "dashboard.compact-ai",
+      "status": "PASS",
+      "detail": "Compact AI insights wired"
+    },
+    {
+      "id": "dashboard.display-name-prop",
+      "status": "PASS",
+      "detail": "displayName prop used"
+    },
+    {
+      "id": "dashboard.page.no-briefing-fetch",
+      "status": "PASS",
+      "detail": "Briefing fetch removed"
+    },
+    {
+      "id": "dashboard.page.no-copilot-fetch",
+      "status": "PASS",
+      "detail": "Copilot fetch removed"
+    },
+    {
+      "id": "team-context.display-name",
+      "status": "PASS",
+      "detail": "TeamContext includes displayName"
+    },
+    {
+      "id": "dashboard.kpi-primary-ids",
+      "status": "PASS",
+      "detail": "Primary KPI filter wired"
+    },
+    {
+      "id": "dashboard.kpi-count",
+      "status": "PASS",
+      "detail": "Exactly 3 primary KPIs"
+    },
+    {
+      "id": "dashboard.hero.greeting",
+      "status": "PASS",
+      "detail": "Dynamic greeting component wired"
+    },
+    {
+      "id": "dashboard.hero.no-email-name",
+      "status": "PASS",
+      "detail": "Hero no longer uses email for name"
+    },
+    {
+      "id": "dashboard.context-cta",
+      "status": "PASS",
+      "detail": "Context-aware dashboard CTA"
+    },
+    {
+      "id": "dashboard.primary-action-resolver",
+      "status": "PASS",
+      "detail": "Primary action resolver exists"
+    },
+    {
+      "id": "ai.insight-categories",
+      "status": "PASS",
+      "detail": "AI insight categories defined"
+    },
+    {
+      "id": "dashboard.ai.next-action",
+      "status": "PASS",
+      "detail": "AI insights show next actions"
+    },
+    {
+      "id": "ai.page.briefing",
+      "status": "PASS",
+      "detail": "Daily briefing moved to Volt AI"
+    },
+    {
+      "id": "dashboard.activity.lightweight",
+      "status": "PASS",
+      "detail": "Activity feed is chronological and lightweight"
+    },
+    {
+      "id": "build.typescript",
+      "status": "PASS",
+      "detail": "tsc --noEmit"
+    }
+  ],
+  "summary": {
+    "pass": 20,
+    "fail": 0,
+    "total": 20
+  }
+}

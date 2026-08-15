@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { parseNumber } from "@/lib/proposals/format";
+import { buildProposalOrgAnalytics } from "@/lib/proposals/profile";
 import {
   PROPOSALS_PAGE_SIZE,
   type Proposal,
@@ -77,8 +78,10 @@ export async function getProposals({
         project:projects!inner (
           id,
           project_name,
+          project_type,
           customer:customers!inner (
-            company_name
+            company_name,
+            contact_name
           )
         ),
         estimate:estimates (
@@ -129,6 +132,7 @@ export async function getProposals({
         project: {
           id: proposal.project.id,
           project_name: proposal.project.project_name,
+          project_type: proposal.project.project_type,
           customer: normalizeCustomer(proposal.project.customer),
         },
         estimate: normalizeEstimate(proposal.estimate),
@@ -284,19 +288,48 @@ export async function getProposalStats() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("proposals")
-    .select("status, amount");
+    .select(
+      `
+        status,
+        amount,
+        sent_at,
+        first_viewed_at,
+        accepted_at,
+        declined_at,
+        project:projects ( project_type )
+      `
+    )
+    .is("archived_at", null);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const proposals = data ?? [];
+  const proposals = (data ?? []).map((item) => ({
+    status: item.status as string,
+    amount: parseNumber(item.amount),
+    sent_at: item.sent_at as string | null,
+    first_viewed_at: item.first_viewed_at as string | null,
+    accepted_at: item.accepted_at as string | null,
+    declined_at: item.declined_at as string | null,
+    project: Array.isArray(item.project) ? item.project[0] : item.project,
+  }));
+
   const draft = proposals.filter((item) => item.status === "Draft").length;
   const sent = proposals.filter((item) => ["Sent", "Viewed"].includes(item.status)).length;
   const accepted = proposals.filter((item) => item.status === "Accepted").length;
   const pipeline = proposals
     .filter((item) => ["Draft", "Sent", "Viewed"].includes(item.status))
-    .reduce((sum, item) => sum + parseNumber(item.amount), 0);
+    .reduce((sum, item) => sum + item.amount, 0);
 
-  return { draft, sent, won: accepted, accepted, pipeline };
+  const orgAnalytics = buildProposalOrgAnalytics(proposals);
+
+  return {
+    draft,
+    sent,
+    won: accepted,
+    accepted,
+    pipeline,
+    orgAnalytics,
+  };
 }

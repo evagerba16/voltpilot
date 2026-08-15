@@ -77,7 +77,7 @@ type DropdownEntry =
 const PLACEHOLDERS: Record<PickerCatalogCategory, string> = {
   labor: "Search labor roles…",
   materials: "Search materials…",
-  equipment: "Search equipment…",
+  equipment: "Search equipment...",
   subcontractors: "Search subcontractors…",
 };
 

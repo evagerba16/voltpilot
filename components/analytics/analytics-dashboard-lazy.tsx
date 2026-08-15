@@ -27,6 +27,7 @@ type AnalyticsDashboardLazyProps = {
   projects: ProjectFilterOption[];
   activeSection: AnalyticsSection;
   precomputed: PrecomputedAnalyticsViewModels;
+  compareEnabled: boolean;
 };
 
 export function AnalyticsDashboardLazy(props: AnalyticsDashboardLazyProps) {

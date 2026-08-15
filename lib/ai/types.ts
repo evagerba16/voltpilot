@@ -71,9 +71,11 @@ export type DashboardInsightItem = {
     | "missing_info"
     | "high_risk"
     | "recommended_action";
+  category: "needs_attention" | "opportunity" | "informational";
   severity: "info" | "warning" | "critical";
   title: string;
   description: string;
+  nextAction: string;
   href: string;
   entityLabel: string;
 };

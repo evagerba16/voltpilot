@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   average,
   daysBetween,
-  getRangeStart,
+  getPeriodBounds,
   groupByPeriod,
   hoursBetween,
   isWithinRange,
@@ -172,38 +172,45 @@ function getCustomerName(project: ProjectRow | undefined) {
   return customer?.company_name ?? "Unknown customer";
 }
 
-function filterProject(project: ProjectRow, filters: AnalyticsFilters, rangeStart: Date | null) {
+function filterProject(
+  project: ProjectRow,
+  filters: AnalyticsFilters,
+  rangeStart: Date | null,
+  rangeEnd: Date | null = null
+) {
   if (project.archived_at) return false;
   if (!matchesCustomerFilter(project.customer_id, filters.customerId)) return false;
   if (!matchesProjectFilter(project.id, filters.projectId)) return false;
   if (!matchesStatusFilter(project.status, filters.projectStatus)) return false;
-  return isWithinRange(project.updated_at, rangeStart);
+  return isWithinRange(project.updated_at, rangeStart, rangeEnd);
 }
 
 function filterEstimate(
   estimate: EstimateRow,
   filters: AnalyticsFilters,
-  rangeStart: Date | null
+  rangeStart: Date | null,
+  rangeEnd: Date | null = null
 ) {
   const project = normalizeRelation<ProjectRow>(estimate.project);
   if (!project) return false;
   if (!matchesCustomerFilter(project.customer_id, filters.customerId)) return false;
   if (!matchesProjectFilter(project.id, filters.projectId)) return false;
   if (!matchesStatusFilter(project.status, filters.projectStatus)) return false;
-  return isWithinRange(estimate.updated_at, rangeStart);
+  return isWithinRange(estimate.updated_at, rangeStart, rangeEnd);
 }
 
 function filterProposal(
   proposal: ProposalRow,
   filters: AnalyticsFilters,
-  rangeStart: Date | null
+  rangeStart: Date | null,
+  rangeEnd: Date | null = null
 ) {
   const project = normalizeRelation<ProjectRow>(proposal.project);
   if (!project) return false;
   if (!matchesCustomerFilter(project.customer_id, filters.customerId)) return false;
   if (!matchesProjectFilter(project.id, filters.projectId)) return false;
   if (!matchesStatusFilter(project.status, filters.projectStatus)) return false;
-  return isWithinRange(proposal.updated_at, rangeStart);
+  return isWithinRange(proposal.updated_at, rangeStart, rangeEnd);
 }
 
 function snapshotDirectCost(snapshot: Record<string, unknown>) {
@@ -813,15 +820,27 @@ export async function getProjectFilterOptions(
 }
 
 export async function getAnalyticsData(
-  filters: AnalyticsFilters
+  filters: AnalyticsFilters,
+  options?: { periodOffset?: number }
 ): Promise<AnalyticsData> {
   const supabase = await createClient();
-  const rangeStart = getRangeStart(filters.dateRange);
+  const { start: rangeStart, end: rangeEnd } = getPeriodBounds(
+    filters.dateRange,
+    options?.periodOffset ?? 0
+  );
   const rangeStartIso = rangeStart?.toISOString();
+  const rangeEndIso = rangeEnd?.toISOString();
 
   const applyRange = <T extends { gte: (col: string, val: string) => T }>(query: T) => {
     if (!rangeStartIso) return query;
-    return query.gte("updated_at", rangeStartIso);
+    let next = query.gte("updated_at", rangeStartIso);
+    if (rangeEndIso) {
+      next = (next as T & { lt: (col: string, val: string) => T }).lt(
+        "updated_at",
+        rangeEndIso
+      );
+    }
+    return next;
   };
 
   const [
@@ -924,15 +943,15 @@ export async function getAnalyticsData(
   }
 
   const projects = (projectsResult.data ?? [] as ProjectRow[]).filter((project) =>
-    filterProject(project as ProjectRow, filters, rangeStart)
+    filterProject(project as ProjectRow, filters, rangeStart, rangeEnd)
   ) as ProjectRow[];
 
   const estimates = (estimatesResult.data ?? [] as EstimateRow[]).filter((estimate) =>
-    filterEstimate(estimate as EstimateRow, filters, rangeStart)
+    filterEstimate(estimate as EstimateRow, filters, rangeStart, rangeEnd)
   ) as EstimateRow[];
 
   const proposalsFiltered = proposals.filter((proposal) =>
-    filterProposal(proposal, filters, rangeStart)
+    filterProposal(proposal, filters, rangeStart, rangeEnd)
   );
 
   const filteredEstimateIds = new Set(estimates.map((estimate) => estimate.id));
@@ -946,7 +965,7 @@ export async function getAnalyticsData(
   ]);
 
   const aiSessionIds = aiSessions
-    .filter((session) => isWithinRange(session.updated_at, rangeStart))
+    .filter((session) => isWithinRange(session.updated_at, rangeStart, rangeEnd))
     .map((session) => session.id);
   const aiMessages = await fetchAiMessagesForSessionIds(supabase, aiSessionIds);
 
@@ -964,7 +983,7 @@ export async function getAnalyticsData(
 
   const aiSessionsFiltered = aiSessions.filter((session) => {
     if (!filteredEstimateIds.has(session.estimate_id)) return false;
-    return isWithinRange(session.updated_at, rangeStart);
+    return isWithinRange(session.updated_at, rangeStart, rangeEnd);
   });
 
   const filteredAiSessionIds = new Set(aiSessionsFiltered.map((session) => session.id));
@@ -977,7 +996,7 @@ export async function getAnalyticsData(
   );
 
   const customers = (customersResult.data ?? [] as CustomerRow[]).filter((customer) => {
-    if (!isWithinRange(customer.created_at, rangeStart)) return false;
+    if (!isWithinRange(customer.created_at, rangeStart, rangeEnd)) return false;
     if (filters.customerId && customer.id !== filters.customerId) return false;
     return true;
   }) as CustomerRow[];

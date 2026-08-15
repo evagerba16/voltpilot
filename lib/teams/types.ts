@@ -97,6 +97,7 @@ export type TeamPermission =
 export type TeamContext = {
   userId: string;
   userEmail: string;
+  displayName: string;
   organizationId: string;
   organizationName: string;
   role: TeamRole;

@@ -1,5 +1,5 @@
 import { DashboardTopNav } from "@/components/dashboard/top-nav";
-import { PageIntro, PageMain } from "@/components/dashboard/page-main";
+import { PageMain } from "@/components/dashboard/page-main";
 import { AnalyticsDashboardLazy } from "@/components/analytics/analytics-dashboard-lazy";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { assertPermission } from "@/lib/auth/get-team-context";
@@ -20,6 +20,7 @@ type AnalyticsPageProps = {
     project?: string;
     status?: string;
     section?: string;
+    compare?: string;
   }>;
 };
 
@@ -53,9 +54,11 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   };
 
   let data;
+  let priorData: Awaited<ReturnType<typeof getAnalyticsData>> | null = null;
   let customers: Awaited<ReturnType<typeof getCustomerFilterOptions>> = [];
   let projects: Awaited<ReturnType<typeof getProjectFilterOptions>> = [];
   let loadError: string | null = null;
+  const compareEnabled = parsed.compare;
 
   try {
     [data, customers, projects] = await Promise.all([
@@ -63,20 +66,22 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
       getCustomerFilterOptions(),
       getProjectFilterOptions(),
     ]);
+
+    if (compareEnabled && filters.dateRange !== "all") {
+      priorData = await getAnalyticsData(filters, { periodOffset: 1 });
+    }
   } catch {
     loadError =
       "We couldn't load your analytics. Refresh the page or try again in a moment.";
   }
 
   const activeSection = parsed.section as AnalyticsSection;
-  const precomputed = data ? precomputeAnalyticsViewModels(data) : null;
+  const precomputed = data ? precomputeAnalyticsViewModels(data, priorData) : null;
 
   return (
     <>
       <DashboardTopNav title="Analytics" />
       <PageMain>
-        <PageIntro description="Premium analytics for electrical contractors — KPIs, trends, AI insights, and exportable reports in one dashboard." />
-
         {loadError ? (
           <AlertBanner variant="error" title="Unable to load analytics">
             {loadError}
@@ -88,6 +93,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
             projects={projects}
             activeSection={activeSection}
             precomputed={precomputed!}
+            compareEnabled={compareEnabled}
           />
         )}
       </PageMain>

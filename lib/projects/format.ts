@@ -36,6 +36,14 @@ export function formatDateTime(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
+export function formatPercent(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return "—";
+  }
+
+  return `${value.toFixed(1)}%`;
+}
+
 export function parseNumber(value: unknown) {
   if (typeof value === "number") {
     return value;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
+import { captureException } from "@/lib/observability/capture-exception";
 
 export default function DashboardError({
   error,
@@ -13,7 +14,7 @@ export default function DashboardError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[dashboard]", error);
+    captureException(error, { source: "dashboard-error-boundary" });
   }, [error]);
 
   return (

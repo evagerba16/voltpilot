@@ -55,6 +55,21 @@ export async function completeCheckoutSession(input: {
   }
 }
 
+export async function getCheckoutSessionByStripeId(stripeCheckoutSessionId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("stripe_checkout_sessions")
+    .select("status, user_id, organization_id, email")
+    .eq("stripe_checkout_session_id", stripeCheckoutSessionId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}
+
 export async function upsertOrganizationSubscription(input: {
   organizationId: string;
   stripeCustomerId: string;

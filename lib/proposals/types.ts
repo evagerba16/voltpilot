@@ -153,8 +153,10 @@ export type ProposalListItem = Proposal & {
   project: {
     id: string;
     project_name: string;
+    project_type?: string;
     customer: {
       company_name: string;
+      contact_name?: string;
     };
   };
   estimate: {

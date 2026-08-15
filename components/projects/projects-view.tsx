@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
@@ -11,8 +11,10 @@ import { FilterBar, FilterSelect } from "@/components/ui/filter-bar";
 import { ListPageHeader } from "@/components/ui/list-page-header";
 import { usePermissions } from "@/lib/hooks/use-permissions";
 import { cardClassName } from "@/lib/ui/form-classes";
+import { ENTITY_PRIMARY_QUESTIONS } from "@/lib/ui/entity-page-copy";
 import { buildProjectsUrl } from "@/lib/projects/url";
 import type { CustomerOption } from "@/lib/projects/queries";
+import type { ProjectListMetrics } from "@/lib/projects/profile-types";
 import {
   PROJECT_STATUSES,
   PROJECT_TYPES,
@@ -25,6 +27,7 @@ import { cn } from "@/lib/utils";
 type ProjectsViewProps = {
   projects: ProjectWithCustomer[];
   customers: CustomerOption[];
+  listMetrics: Record<string, ProjectListMetrics>;
   total: number;
   page: number;
   totalPages: number;
@@ -46,6 +49,7 @@ const viewOptions: { value: ProjectArchiveFilter; label: string }[] = [
 export function ProjectsView({
   projects,
   customers,
+  listMetrics,
   total,
   page,
   totalPages,
@@ -60,6 +64,11 @@ export function ProjectsView({
   const router = useRouter();
   const { can } = usePermissions();
   const canEdit = can("projects.edit");
+  const [instantSearch, setInstantSearch] = useState(search);
+
+  useEffect(() => {
+    setInstantSearch(search);
+  }, [search]);
 
   const selectedCustomer = customers.find((customer) => customer.id === customerFilter);
 
@@ -92,6 +101,10 @@ export function ProjectsView({
     [navigate]
   );
 
+  const handleSearchInputChange = useCallback((query: string) => {
+    setInstantSearch(query);
+  }, []);
+
   const chips = [
     statusFilter ? { key: "status", label: "Status", value: statusFilter } : null,
     typeFilter ? { key: "type", label: "Type", value: typeFilter } : null,
@@ -111,8 +124,8 @@ export function ProjectsView({
     <>
       <div className={cardClassName}>
         <ListPageHeader
-          title="Project portfolio"
-          description="Active jobs, bid deadlines, and pipeline status at a glance."
+          title="Projects"
+          description={ENTITY_PRIMARY_QUESTIONS.project}
           action={
             canEdit ? (
               <Link href="/projects/new" className={buttonVariants()}>
@@ -124,9 +137,11 @@ export function ProjectsView({
         />
 
         <FilterBar
-          search={search}
+          search={instantSearch}
           searchPlaceholder="Search by project, customer, GC, or estimator..."
           onSearchChange={handleSearchChange}
+          onSearchInputChange={handleSearchInputChange}
+          debounceMs={300}
           chips={chips}
           onClearChip={(key) => {
             if (key === "status") navigate({ status: "" });
@@ -202,6 +217,7 @@ export function ProjectsView({
 
       <ProjectsTable
         projects={projects}
+        listMetrics={listMetrics}
         total={total}
         page={page}
         totalPages={totalPages}

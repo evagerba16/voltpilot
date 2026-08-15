@@ -1,0 +1,115 @@
+{
+  "generated_at": "2026-07-30T07:48:03.102Z",
+  "results": [
+    {
+      "id": "019.table.customer_notes",
+      "status": "pass",
+      "detail": "exists"
+    },
+    {
+      "id": "019.rls.customer_notes",
+      "status": "pass",
+      "detail": "enabled"
+    },
+    {
+      "id": "019.policies.customer_notes",
+      "status": "pass",
+      "detail": "4 policies"
+    },
+    {
+      "id": "019.table.customer_documents",
+      "status": "pass",
+      "detail": "exists"
+    },
+    {
+      "id": "019.rls.customer_documents",
+      "status": "pass",
+      "detail": "enabled"
+    },
+    {
+      "id": "019.policies.customer_documents",
+      "status": "pass",
+      "detail": "3 policies"
+    },
+    {
+      "id": "019.bucket.customer-documents",
+      "status": "pass",
+      "detail": "exists"
+    },
+    {
+      "id": "019.schema_migrations",
+      "status": "pass",
+      "detail": "recorded"
+    },
+    {
+      "id": "020.column.customers.status",
+      "status": "pass",
+      "detail": "exists"
+    },
+    {
+      "id": "020.column.customer_notes.is_pinned",
+      "status": "pass",
+      "detail": "exists"
+    },
+    {
+      "id": "020.column.customer_documents.category",
+      "status": "pass",
+      "detail": "exists"
+    },
+    {
+      "id": "020.schema_migrations",
+      "status": "pass",
+      "detail": "recorded"
+    },
+    {
+      "id": "021.table.project_change_orders",
+      "status": "pass",
+      "detail": "exists"
+    },
+    {
+      "id": "021.table.project_job_logs",
+      "status": "pass",
+      "detail": "exists"
+    },
+    {
+      "id": "021.table.project_job_log_photos",
+      "status": "pass",
+      "detail": "exists"
+    },
+    {
+      "id": "021.table.project_job_actuals",
+      "status": "pass",
+      "detail": "exists"
+    },
+    {
+      "id": "021.rls.project_change_orders",
+      "status": "pass",
+      "detail": "enabled"
+    },
+    {
+      "id": "021.rls.project_job_logs",
+      "status": "pass",
+      "detail": "enabled"
+    },
+    {
+      "id": "021.rls.project_job_log_photos",
+      "status": "pass",
+      "detail": "enabled"
+    },
+    {
+      "id": "021.bucket.project-job-photos",
+      "status": "pass",
+      "detail": "exists"
+    },
+    {
+      "id": "021.schema_migrations",
+      "status": "pass",
+      "detail": "recorded"
+    },
+    {
+      "id": "files.migration-019",
+      "status": "pass",
+      "detail": "source present"
+    }
+  ]
+}

@@ -23,6 +23,7 @@ import type { AnalyticsData } from "@/lib/analytics/types";
 type AnalyticsExecutiveOverviewProps = {
   data: AnalyticsData;
   precomputed: PrecomputedAnalyticsViewModels;
+  compareEnabled: boolean;
 };
 
 const ACTIVITY_ICONS = {
@@ -97,20 +98,25 @@ function DataTable({
 export function AnalyticsExecutiveOverview({
   data,
   precomputed,
+  compareEnabled,
 }: AnalyticsExecutiveOverviewProps) {
-  const { analytics, forecasts, aiInsights } = precomputed;
+  const { analytics, forecasts, aiInsights, comparisons } = precomputed;
 
   return (
     <div className="space-y-8">
+      <AnalyticsOverviewKpis
+        executive={data.executive}
+        comparisons={comparisons.executive}
+        compareEnabled={compareEnabled}
+      />
+
+      <AnalyticsOverviewCharts charts={data.charts} />
+
       <AnalyticsAiSummary
         data={data}
         analytics={analytics}
         aiInsights={aiInsights}
       />
-
-      <AnalyticsOverviewKpis executive={data.executive} />
-
-      <AnalyticsOverviewCharts charts={data.charts} />
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">

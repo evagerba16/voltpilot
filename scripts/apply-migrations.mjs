@@ -142,6 +142,19 @@ const migrationAppliedProbes = {
     functionHasArgument(client, "submit_proposal_portal_response", "p_comment"),
   "018_stripe_subscriptions.sql": (client) =>
     tableExists(client, "organization_subscriptions"),
+  "019_customer_crm.sql": async (client) =>
+    (await tableExists(client, "customer_notes")) &&
+    (await tableExists(client, "customer_documents")),
+  "020_customer_crm_enhancements.sql": async (client) =>
+    (await columnExists(client, "customers", "status")) &&
+    (await columnExists(client, "customer_notes", "is_pinned")) &&
+    (await columnExists(client, "customer_documents", "category")),
+  "021_project_job_costing.sql": async (client) =>
+    (await tableExists(client, "project_change_orders")) &&
+    (await tableExists(client, "project_job_logs")) &&
+    (await tableExists(client, "project_job_log_photos")),
+  "022_organization_catalog_items.sql": (client) =>
+    tableExists(client, "organization_catalog_items"),
 };
 
 async function isMigrationRecorded(client, filename) {

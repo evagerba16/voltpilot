@@ -11,6 +11,8 @@ type ProposalsPaginationProps = {
   total: number;
   search: string;
   statusFilter: string;
+  sort?: string;
+  order?: string;
 };
 
 export function ProposalsPagination({
@@ -19,6 +21,8 @@ export function ProposalsPagination({
   total,
   search,
   statusFilter,
+  sort,
+  order,
 }: ProposalsPaginationProps) {
   const start = total === 0 ? 0 : (page - 1) * 10 + 1;
   const end = Math.min(page * 10, total);
@@ -32,7 +36,7 @@ export function ProposalsPagination({
       </p>
       <div className="flex items-center gap-2">
         <Link
-          href={buildProposalsUrl({ page: page - 1, q: search, status: statusFilter })}
+          href={buildProposalsUrl({ page: page - 1, q: search, status: statusFilter, sort, order })}
           aria-disabled={page <= 1}
           className={cn(
             buttonVariants({ variant: "outline", size: "sm" }),
@@ -46,7 +50,7 @@ export function ProposalsPagination({
           Page {page} of {totalPages}
         </span>
         <Link
-          href={buildProposalsUrl({ page: page + 1, q: search, status: statusFilter })}
+          href={buildProposalsUrl({ page: page + 1, q: search, status: statusFilter, sort, order })}
           aria-disabled={page >= totalPages}
           className={cn(
             buttonVariants({ variant: "outline", size: "sm" }),

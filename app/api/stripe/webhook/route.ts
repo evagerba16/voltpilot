@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import {
+  getCheckoutSessionByStripeId,
   updateSubscriptionByStripeId,
   upsertOrganizationSubscription,
 } from "@/lib/billing/admin-queries";
@@ -10,6 +11,8 @@ import {
   subscriptionFromStripe,
 } from "@/lib/billing/provision-account";
 import { sendWelcomeEmail } from "@/lib/email/send-welcome";
+import { captureException } from "@/lib/observability/capture-exception";
+import { logger } from "@/lib/observability/logger";
 import { getStripeClient } from "@/lib/stripe/client";
 import { getStripeEnv } from "@/lib/stripe/env";
 
@@ -45,21 +48,34 @@ export async function POST(request: Request) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
 
-        if (session.mode === "subscription") {
-          const provisioned = await provisionAccountFromCheckoutSession(session);
+        if (session.mode !== "subscription") {
+          break;
+        }
 
-          if (provisioned.passwordSetupUrl) {
-            const emailResult = await sendWelcomeEmail({
-              to: provisioned.email,
-              passwordSetupUrl: provisioned.passwordSetupUrl,
+        const existing = await getCheckoutSessionByStripeId(session.id);
+
+        if (existing?.status === "completed") {
+          logger.info("stripe webhook duplicate checkout.session.completed skipped", {
+            sessionId: session.id,
+            email: existing.email,
+          });
+          break;
+        }
+
+        const provisioned = await provisionAccountFromCheckoutSession(session);
+
+        if (provisioned.passwordSetupUrl) {
+          const emailResult = await sendWelcomeEmail({
+            to: provisioned.email,
+            passwordSetupUrl: provisioned.passwordSetupUrl,
+          });
+
+          if (!emailResult.sent) {
+            logger.warn("account provisioned but welcome email failed", {
+              sessionId: session.id,
+              email: provisioned.email,
+              reason: emailResult.message,
             });
-
-            if (!emailResult.sent) {
-              throw new Error(
-                emailResult.message ??
-                  "Account provisioned but welcome email could not be sent."
-              );
-            }
           }
         }
 
@@ -90,7 +106,7 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Webhook handler failed.";
-    console.error("[stripe webhook]", event.type, message);
+    captureException(error, { source: "stripe-webhook", eventType: event.type });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 

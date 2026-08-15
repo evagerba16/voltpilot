@@ -113,7 +113,8 @@ export async function markProposalAsAccepted(
     signerName?: string | null;
     signatureData?: string | null;
     acceptedAt?: string;
-  } = {}
+  } = {},
+  note = "Customer accepted via portal"
 ) {
   const acceptedAt = patch.acceptedAt ?? new Date().toISOString();
 
@@ -132,7 +133,7 @@ export async function markProposalAsAccepted(
     {
       proposalId,
       organizationId,
-      note: "Customer accepted via portal",
+      note,
     }
   );
 }

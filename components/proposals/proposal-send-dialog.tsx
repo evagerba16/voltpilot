@@ -12,12 +12,18 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
+import {
+  formatProposalStarRating,
+  reviewProposal,
+} from "@/lib/ai/proposal-review";
+import type { ProposalEditorState } from "@/lib/proposals/types";
 import { inputClassName, textareaClassName } from "@/lib/ui/form-classes";
 
 type ProposalSendDialogProps = {
   open: boolean;
   proposalId: string;
   proposalTitle: string;
+  proposalContent?: ProposalEditorState;
   onClose: () => void;
   onSent?: () => void;
 };
@@ -30,6 +36,7 @@ export function ProposalSendDialog({
   open,
   proposalId,
   proposalTitle,
+  proposalContent,
   onClose,
   onSent,
 }: ProposalSendDialogProps) {
@@ -118,6 +125,8 @@ export function ProposalSendDialog({
     }
   }
 
+  const reviewResult = proposalContent ? reviewProposal(proposalContent) : null;
+
   return (
     <Modal
       open={open}
@@ -144,6 +153,23 @@ export function ProposalSendDialog({
         </div>
       ) : (
         <div className="space-y-4">
+          {reviewResult ? (
+            <AlertBanner
+              variant={reviewResult.score >= 85 ? "success" : "info"}
+              title={`Proposal score: ${reviewResult.score}/100 ${formatProposalStarRating(reviewResult.starRating)}`}
+            >
+              {reviewResult.suggestions.length > 0 ? (
+                <ul className="mt-2 space-y-1">
+                  {reviewResult.suggestions.slice(0, 4).map((suggestion) => (
+                    <li key={suggestion.id}>{suggestion.message}</li>
+                  ))}
+                </ul>
+              ) : (
+                "All key sections look good — ready to send."
+              )}
+            </AlertBanner>
+          ) : null}
+
           <div className="space-y-2">
             <label htmlFor="send-recipient" className="text-sm font-medium">
               Customer email

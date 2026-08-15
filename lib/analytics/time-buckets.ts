@@ -14,14 +14,28 @@ export function parseNumber(value: unknown) {
 }
 
 export function getRangeStart(dateRange: AnalyticsDateRange) {
+  return getPeriodBounds(dateRange, 0).start;
+}
+
+export function getPeriodBounds(
+  dateRange: AnalyticsDateRange,
+  periodOffset = 0
+): { start: Date | null; end: Date | null } {
   const now = new Date();
 
   if (dateRange === "all") {
-    return null;
+    return { start: null, end: null };
   }
 
   if (dateRange === "ytd") {
-    return new Date(now.getFullYear(), 0, 1);
+    const currentStart = new Date(now.getFullYear(), 0, 1);
+    if (periodOffset === 0) {
+      return { start: currentStart, end: null };
+    }
+
+    const priorEnd = new Date(currentStart);
+    const priorStart = new Date(now.getFullYear() - 1, 0, 1);
+    return { start: priorStart, end: priorEnd };
   }
 
   const days: Record<Exclude<AnalyticsDateRange, "ytd" | "all">, number> = {
@@ -31,18 +45,31 @@ export function getRangeStart(dateRange: AnalyticsDateRange) {
     "12m": 365,
   };
 
-  const offset = days[dateRange as keyof typeof days] ?? 365;
-  const start = new Date(now);
-  start.setDate(start.getDate() - offset);
-  return start;
+  const durationDays = days[dateRange as keyof typeof days] ?? 365;
+  const currentEnd = periodOffset === 0 ? now : shiftDays(now, -durationDays * periodOffset);
+  const currentStart = shiftDays(currentEnd, -durationDays);
+
+  return { start: currentStart, end: periodOffset === 0 ? null : currentEnd };
 }
 
-export function isWithinRange(value: string, start: Date | null) {
-  if (!start) {
-    return true;
+function shiftDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+export function isWithinRange(value: string, start: Date | null, end: Date | null = null) {
+  const date = new Date(value);
+
+  if (start && date < start) {
+    return false;
   }
 
-  return new Date(value) >= start;
+  if (end && date >= end) {
+    return false;
+  }
+
+  return true;
 }
 
 function dayKey(date: Date) {

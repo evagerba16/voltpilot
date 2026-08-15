@@ -6,6 +6,7 @@ type AnalyticsUrlParams = {
   project?: string;
   status?: string;
   section?: string;
+  compare?: boolean;
 };
 
 export function buildAnalyticsUrl({
@@ -14,6 +15,7 @@ export function buildAnalyticsUrl({
   project,
   status,
   section,
+  compare,
 }: AnalyticsUrlParams) {
   const params = new URLSearchParams();
 
@@ -37,6 +39,10 @@ export function buildAnalyticsUrl({
     params.set("section", section);
   }
 
+  if (compare) {
+    params.set("compare", "1");
+  }
+
   const query = params.toString();
   return query ? `/analytics?${query}` : "/analytics";
 }
@@ -47,7 +53,8 @@ export function parseAnalyticsFilters(searchParams: {
   project?: string;
   status?: string;
   section?: string;
-}): AnalyticsFilters & { section: string } {
+  compare?: string;
+}): AnalyticsFilters & { section: string; compare: boolean } {
   const validRanges = ["7d", "30d", "90d", "12m", "ytd", "all"] as const;
   const dateRange = validRanges.includes(searchParams.range as AnalyticsDateRange)
     ? (searchParams.range as AnalyticsDateRange)
@@ -75,6 +82,7 @@ export function parseAnalyticsFilters(searchParams: {
     projectId: searchParams.project?.trim() ?? "",
     projectStatus: searchParams.status?.trim() ?? "",
     section,
+    compare: searchParams.compare === "1" || searchParams.compare === "true",
   };
 }
 

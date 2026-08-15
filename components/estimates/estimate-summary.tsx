@@ -96,10 +96,7 @@ export function EstimateSummary({
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="border-b border-border px-5 py-4">
-        <h2 className="text-base font-semibold">Estimate summary</h2>
-        <p className="text-sm text-muted-foreground">
-          Adjust markups and see your bid price update as you edit line items.
-        </p>
+        <h2 className="text-base font-semibold tracking-tight">Estimate summary</h2>
       </div>
 
       <div className="space-y-1 px-5 py-4">

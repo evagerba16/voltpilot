@@ -1,0 +1,45 @@
+{
+  "generated_at": "2026-07-30T07:48:18.443Z",
+  "results": [
+    {
+      "id": "migrations.019-021",
+      "status": "pass",
+      "detail": "node scripts/verify-migration-019-021.mjs"
+    },
+    {
+      "id": "crm.open-contract-value",
+      "status": "pass",
+      "detail": "openContractValue wired in queries"
+    },
+    {
+      "id": "job-costing.updateProjectJobLog",
+      "status": "pass",
+      "detail": "exported"
+    },
+    {
+      "id": "job-costing.updateProjectChangeOrder",
+      "status": "pass",
+      "detail": "exported"
+    },
+    {
+      "id": "job-costing.deleteProjectChangeOrder",
+      "status": "pass",
+      "detail": "exported"
+    },
+    {
+      "id": "job-costing.budget-panel-deprecated",
+      "status": "pass",
+      "detail": "marked deprecated"
+    },
+    {
+      "id": "build.typescript",
+      "status": "pass",
+      "detail": "npx tsc --noEmit"
+    },
+    {
+      "id": "build.next",
+      "status": "pass",
+      "detail": "npm run build"
+    }
+  ]
+}

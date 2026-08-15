@@ -30,6 +30,7 @@ type AnalyticsFiltersBarProps = {
   projects: ProjectFilterOption[];
   activeSection: AnalyticsSection;
   refreshing: boolean;
+  compareEnabled: boolean;
   onRefresh: () => void;
 };
 
@@ -48,6 +49,7 @@ export function AnalyticsFiltersBar({
   projects,
   activeSection,
   refreshing,
+  compareEnabled,
   onRefresh,
 }: AnalyticsFiltersBarProps) {
   const [selectedCustomer, setSelectedCustomer] = useState(
@@ -182,7 +184,19 @@ export function AnalyticsFiltersBar({
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-4">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="compare"
+              value="1"
+              defaultChecked={compareEnabled}
+              className="size-4 rounded border-input accent-primary"
+            />
+            <span>Compare to prior period</span>
+          </label>
+
+          <div className="flex flex-wrap items-center gap-2">
           <Button type="submit">Apply filters</Button>
           <Link
             href={buildAnalyticsUrl({ section: activeSection })}
@@ -197,6 +211,7 @@ export function AnalyticsFiltersBar({
             Refresh
           </Button>
           <AnalyticsExportButtons filters={data.filters} />
+          </div>
         </div>
       </form>
 
@@ -210,6 +225,7 @@ export function AnalyticsFiltersBar({
               project: data.filters.projectId,
               status: data.filters.projectStatus,
               section: section.value,
+              compare: compareEnabled,
             })}
             className={cn(
               "shrink-0 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors",

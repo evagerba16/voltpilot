@@ -18,7 +18,7 @@ export type NavItem = {
 
 export const DASHBOARD_NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/ai", label: "AI Assistant", icon: Sparkles },
+  { href: "/ai", label: "Command Center", icon: Sparkles },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/estimates", label: "Estimates", icon: Building2 },

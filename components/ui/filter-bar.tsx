@@ -16,6 +16,8 @@ type FilterBarProps = {
   search?: string;
   searchPlaceholder?: string;
   onSearchChange: (query: string) => void;
+  onSearchInputChange?: (query: string) => void;
+  debounceMs?: number;
   filters?: ReactNode;
   chips?: FilterChip[];
   onClearChip?: (key: string) => void;
@@ -29,13 +31,15 @@ export function FilterBar({
   search = "",
   searchPlaceholder = "Search...",
   onSearchChange,
+  onSearchInputChange,
+  debounceMs = 350,
   filters,
   chips = [],
   onClearChip,
   onClearAll,
 }: FilterBarProps) {
   const [query, setQuery] = useState(search);
-  const debouncedQuery = useDebouncedValue(query, 350);
+  const debouncedQuery = useDebouncedValue(query, debounceMs);
   const onSearchChangeRef = useRef(onSearchChange);
   const lastEmittedSearchRef = useRef(search.trim());
 
@@ -70,7 +74,10 @@ export function FilterBar({
           <input
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              onSearchInputChange?.(event.target.value);
+            }}
             placeholder={searchPlaceholder}
             aria-label="Search"
             className={inputClassName}

@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import {
-  AlertTriangle,
   Calculator,
-  CircleAlert,
   Info,
+  Lightbulb,
   Sparkles,
+  TriangleAlert,
 } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { insightCategoryLabel, type DashboardInsightCategory } from "@/lib/ai/insight-category";
 import type { DashboardInsightsData } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
@@ -18,19 +19,23 @@ type AiInsightsPanelProps = {
   data: DashboardInsightsData;
 };
 
-const TYPE_LABELS = {
-  review_required: "Review required",
-  low_margin: "Low margin",
-  missing_info: "Missing info",
-  high_risk: "High risk",
-  recommended_action: "Recommended",
-} as const;
-
-const severityStyles = {
-  critical: "border-destructive/30 bg-destructive/5",
-  warning: "border-amber-500/30 bg-amber-500/5",
-  info: "border-border bg-muted/20",
+const categoryStyles: Record<DashboardInsightCategory, string> = {
+  needs_attention: "border-amber-500/20 bg-amber-500/[0.03]",
+  opportunity: "border-violet-500/20 bg-violet-500/[0.03]",
+  informational: "border-border bg-muted/10",
 };
+
+function CategoryIcon({ category }: { category: DashboardInsightCategory }) {
+  if (category === "needs_attention") {
+    return <TriangleAlert className="size-4 text-amber-600" />;
+  }
+
+  if (category === "opportunity") {
+    return <Lightbulb className="size-4 text-violet-600 dark:text-violet-400" />;
+  }
+
+  return <Info className="size-4 text-muted-foreground" />;
+}
 
 export function AiInsightsPanel({ data }: AiInsightsPanelProps) {
   const primaryHref =
@@ -99,27 +104,24 @@ export function AiInsightsPanel({ data }: AiInsightsPanelProps) {
               href={item.href}
               className={cn(
                 "flex items-start gap-3 px-6 py-4 transition-colors hover:bg-muted/20",
-                severityStyles[item.severity]
+                categoryStyles[item.category]
               )}
             >
               <div className="mt-0.5 shrink-0">
-                {item.severity === "critical" ? (
-                  <CircleAlert className="size-4 text-destructive" />
-                ) : item.severity === "warning" ? (
-                  <AlertTriangle className="size-4 text-amber-600" />
-                ) : (
-                  <Info className="size-4 text-primary" />
-                )}
+                <CategoryIcon category={item.category} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-medium">{item.title}</p>
                   <span className="rounded-full bg-background px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {TYPE_LABELS[item.type]}
+                    {insightCategoryLabel(item.category)}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {item.description}
+                </p>
+                <p className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary">
+                  {item.nextAction}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {item.entityLabel}
@@ -138,7 +140,7 @@ export function AiInsightsPanel({ data }: AiInsightsPanelProps) {
           href="/ai"
           className="text-center text-sm font-medium text-primary hover:underline sm:text-left"
         >
-          Open AI Assistant →
+          Open Volt AI →
         </Link>
       </div>
     </div>

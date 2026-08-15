@@ -1,5 +1,5 @@
 import { DashboardTopNav } from "@/components/dashboard/top-nav";
-import { PageIntro, PageMain } from "@/components/dashboard/page-main";
+import { PageMain } from "@/components/dashboard/page-main";
 import { ProjectsStats } from "@/components/projects/projects-stats";
 import { ProjectsView } from "@/components/projects/projects-view";
 import { AlertBanner } from "@/components/ui/alert-banner";
@@ -8,6 +8,7 @@ import {
   getProjectStats,
   getProjects,
 } from "@/lib/projects/queries";
+import { getProjectsListMetrics } from "@/lib/projects/profile";
 import {
   PROJECT_SORT_FIELDS,
   type ProjectArchiveFilter,
@@ -61,22 +62,25 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   let data;
   let customers: Awaited<ReturnType<typeof getCustomerOptions>> = [];
   let stats: Awaited<ReturnType<typeof getProjectStats>> | null = null;
+  let listMetrics: Awaited<ReturnType<typeof getProjectsListMetrics>> = {};
   let loadError: string | null = null;
 
   try {
-    [data, customers, stats] = await Promise.all([
-      getProjects({
-        page,
-        search,
-        sort,
-        order,
-        view,
-        status: statusFilter,
-        type: typeFilter,
-        customer: customerFilter,
-      }),
+    data = await getProjects({
+      page,
+      search,
+      sort,
+      order,
+      view,
+      status: statusFilter,
+      type: typeFilter,
+      customer: customerFilter,
+    });
+
+    [customers, stats, listMetrics] = await Promise.all([
       getCustomerOptions(),
       getProjectStats(),
+      getProjectsListMetrics(data.projects),
     ]);
   } catch {
     loadError = "We couldn't load your projects. Refresh the page or try again in a moment.";
@@ -86,8 +90,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     <>
       <DashboardTopNav title="Projects" />
       <PageMain>
-        <PageIntro description="Track every job from lead to award—bids, estimates, and proposals in one place." />
-
         {loadError ? (
           <AlertBanner variant="error" title="Unable to load projects">
             {loadError}
@@ -99,13 +101,17 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 activeProjects={stats.activeProjects}
                 estimatingProjects={stats.estimatingProjects}
                 proposalsSent={stats.proposalsSent}
+                awardedProjects={stats.awardedProjects}
                 estimatedRevenue={stats.estimatedRevenue}
+                averageMargin={stats.averageMargin}
+                compact
               />
             ) : null}
 
             <ProjectsView
               projects={data!.projects}
               customers={customers}
+              listMetrics={listMetrics}
               total={data!.total}
               page={data!.page}
               totalPages={data!.totalPages}

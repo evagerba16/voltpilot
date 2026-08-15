@@ -11,6 +11,7 @@ import { FilterBar, FilterSelect } from "@/components/ui/filter-bar";
 import { ListPageHeader } from "@/components/ui/list-page-header";
 import { usePermissions } from "@/lib/hooks/use-permissions";
 import { cardClassName } from "@/lib/ui/form-classes";
+import { ENTITY_PRIMARY_QUESTIONS } from "@/lib/ui/entity-page-copy";
 import type { ProjectOption } from "@/lib/estimates/queries";
 import type { EstimateListItem } from "@/lib/estimates/types";
 import { buildEstimatesUrl } from "@/lib/estimates/url";
@@ -73,8 +74,8 @@ export function EstimatesView({
     <>
       <div className={cardClassName}>
         <ListPageHeader
-          title="Estimate library"
-          description="All your job estimates in one place—open any estimate to price line items and build proposals."
+          title="Estimates"
+          description={ENTITY_PRIMARY_QUESTIONS.estimatesList}
           action={
             canEdit ? (
               <Button onClick={() => setCreateDialogOpen(true)}>

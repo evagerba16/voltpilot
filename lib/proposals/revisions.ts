@@ -163,6 +163,30 @@ export async function getProposalViews(proposalId: string) {
   return (data ?? []) as ProposalViewRecord[];
 }
 
+export async function getProposalComments(proposalId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("proposal_comments")
+    .select("id, author_name, body, created_at")
+    .eq("proposal_id", proposalId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (error.message.includes("proposal_comments")) {
+      return [];
+    }
+
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((comment) => ({
+    id: String(comment.id),
+    author_name: String(comment.author_name),
+    body: String(comment.body),
+    created_at: String(comment.created_at),
+  }));
+}
+
 export async function logProposalEmail(input: {
   proposalId: string;
   organizationId: string;

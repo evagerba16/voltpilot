@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { ArrowLeft, Copy, FileText, Keyboard, Lock, LockOpen, Save } from "lucide-react";
 
 import { createProposalFromEstimate } from "@/app/(dashboard)/proposals/actions";
 import {
@@ -15,35 +13,32 @@ import {
   reopenEstimate,
   saveEstimate,
 } from "@/app/(dashboard)/estimates/actions";
+import { EstimateAiInsightsCompact } from "@/components/estimates/estimate-ai-insights-compact";
+import { EstimateLessonsCompact } from "@/components/estimates/estimate-lessons-compact";
+import { EstimateBuilderOverflowMenu } from "@/components/estimates/estimate-builder-overflow-menu";
 import {
-  AiReviewButton,
-} from "@/components/estimates/AIReviewPanel";
+  EstimateWorkspaceHeader,
+  EstimateWorkspaceToolbar,
+} from "@/components/estimates/estimate-workspace-header";
+import { BulkActionsToolbar } from "@/components/estimates/bulk-actions-toolbar";
+import { EstimateSection } from "@/components/estimates/estimate-section";
+import type { LineItemPickerSelection } from "@/components/estimates/line-item-picker";
+import {
+  EstimateTemplatesDialog,
+} from "@/components/estimates/estimate-templates-dialog";
+import { EstimateSummary } from "@/components/estimates/estimate-summary";
+import {
+  EstimateVersionHistory,
+} from "@/components/estimates/estimate-version-history";
+import { AssembliesLibraryPanel } from "@/components/estimates/assemblies-library-panel";
+import { AlertBanner } from "@/components/ui/alert-banner";
+import { Modal } from "@/components/ui/modal";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import {
   buildLineItemFromSuggestion,
   type AiReviewRecommendation,
   type AiReviewResult,
 } from "@/lib/ai/ai-review-service";
-import {
-  EstimateAssistantButton,
-} from "@/components/ai/estimate-assistant-panel";
-import { AiEstimateReviewCard } from "@/components/estimates/ai-estimate-review-card";
-import { AssembliesLibraryPanel } from "@/components/estimates/assemblies-library-panel";
-import { BulkActionsToolbar } from "@/components/estimates/bulk-actions-toolbar";
-import { EstimateSection } from "@/components/estimates/estimate-section";
-import type { LineItemPickerSelection } from "@/components/estimates/line-item-picker";
-import {
-  EstimateTemplatesButton,
-  EstimateTemplatesDialog,
-} from "@/components/estimates/estimate-templates-dialog";
-import { EstimateSummary } from "@/components/estimates/estimate-summary";
-import {
-  EstimateVersionHistoryButton,
-  SaveStatusIndicator,
-} from "@/components/estimates/estimate-version-history";
-import { Button } from "@/components/ui/button";
-import { AlertBanner } from "@/components/ui/alert-banner";
-import { useConfirm } from "@/components/ui/confirm-provider";
-import { Modal } from "@/components/ui/modal";
 import {
   buildLineItemsFromAssembly,
   type EstimateAssembly,
@@ -78,6 +73,14 @@ import {
   type EstimateWithProject,
 } from "@/lib/estimates/types";
 import { normalizeUnitForCategory } from "@/lib/estimates/units";
+import { isEstimateCopilotEnabled } from "@/lib/copilot/client/feature-flag";
+import {
+  resolveEstimatePrimaryAction,
+  shouldShowFinalizeSecondary,
+} from "@/lib/estimates/primary-action";
+import type { EstimateGuidance } from "@/lib/lessons/types";
+
+const estimateCopilotEnabled = isEstimateCopilotEnabled();
 
 const AIReviewPanel = dynamic(
   () =>
@@ -95,10 +98,10 @@ const EstimateAssistantPanel = dynamic(
   { ssr: false }
 );
 
-const EstimateVersionHistory = dynamic(
+const EstimateCopilotPanel = dynamic(
   () =>
-    import("@/components/estimates/estimate-version-history").then(
-      (module) => module.EstimateVersionHistory
+    import("@/components/estimates/copilot/estimate-copilot-panel").then(
+      (module) => module.EstimateCopilotPanel
     ),
   { ssr: false }
 );
@@ -109,6 +112,7 @@ type EstimateBuilderProps = {
   initialStatus: EstimateStatus;
   initialVersions: EstimateVersion[];
   project: EstimateWithProject["project"];
+  guidance: EstimateGuidance;
 };
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -127,6 +131,7 @@ export function EstimateBuilder({
   initialStatus,
   initialVersions,
   project,
+  guidance,
 }: EstimateBuilderProps) {
   const [state, setState] = useState(initialState);
   const [status, setStatus] = useState<EstimateStatus>(initialStatus);
@@ -136,12 +141,15 @@ export function EstimateBuilder({
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [reviewResult, setReviewResult] = useState<AiReviewResult | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [assembliesOpen, setAssembliesOpen] = useState(false);
+  const [overflowOpen, setOverflowOpen] = useState(false);
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(
     () => new Set()
   );
@@ -158,6 +166,26 @@ export function EstimateBuilder({
   reviewResultRef.current = reviewResult;
 
   const isLocked = status === "Final";
+
+  const hasLineItems = useMemo(
+    () =>
+      state.line_items.some(
+        (item) => item.quantity > 0 && item.description.trim().length > 0
+      ),
+    [state.line_items]
+  );
+
+  const primaryAction = useMemo(
+    () =>
+      resolveEstimatePrimaryAction({
+        status,
+        hasLineItems,
+        copilotEnabled: estimateCopilotEnabled,
+      }),
+    [status, hasLineItems]
+  );
+
+  const showFinalizeSecondary = shouldShowFinalizeSecondary({ status, hasLineItems });
 
   const reviewContext = useMemo(
     () => ({
@@ -895,6 +923,31 @@ export function EstimateBuilder({
     });
   }
 
+  function handlePrimaryAction() {
+    switch (primaryAction.kind) {
+      case "assemblies":
+        setAssembliesOpen(true);
+        break;
+      case "copilot":
+        setCopilotOpen(true);
+        break;
+      case "review":
+        handleOpenReview();
+        break;
+      case "proposal":
+        handleGenerateProposal();
+        break;
+      case "finalize":
+        void handleFinalize();
+        break;
+      case "reopen":
+        void handleReopen();
+        break;
+      default:
+        break;
+    }
+  }
+
   function handleAiApplied(nextState: EstimateBuilderState, savedAt?: string) {
     setState(nextState);
     lastSavedStateRef.current = serializeState(nextState);
@@ -904,198 +957,49 @@ export function EstimateBuilder({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="sticky top-0 z-20 -mx-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Final selling price
-            </p>
-            <p className="text-2xl font-bold tabular-nums tracking-tight">
-              {formatCurrency(totals.finalSellingPrice)}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground">Labor</p>
-              <p className="font-medium tabular-nums">
-                {formatCurrency(totals.laborTotal)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Materials</p>
-              <p className="font-medium tabular-nums">
-                {formatCurrency(totals.materialsTotal)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Equipment</p>
-              <p className="font-medium tabular-nums">
-                {formatCurrency(totals.equipmentTotal)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Subcontractors</p>
-              <p className="font-medium tabular-nums">
-                {formatCurrency(totals.subcontractorsTotal)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Direct cost</p>
-              <p className="font-medium tabular-nums">
-                {formatCurrency(totals.directCost)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Overhead</p>
-              <p className="font-medium tabular-nums">
-                {formatCurrency(totals.overheadAmount)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Profit</p>
-              <p className="font-medium tabular-nums">
-                {formatCurrency(totals.profitAmount)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Gross margin</p>
-              <p className="font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
-                {formatPercent(totals.grossMarginPercent)}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-10">
+      <EstimateWorkspaceHeader
+        project={project}
+        statusLabel={formatEstimateStatus(status)}
+        title={state.title}
+        isLocked={isLocked}
+        onTitleChange={(value) => {
+          setState((current) => ({ ...current, title: value }));
+          markDirty();
+        }}
+        notes={state.notes}
+        onNotesChange={(value) => {
+          setState((current) => ({ ...current, notes: value }));
+          markDirty();
+        }}
+      />
 
-      <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 space-y-3">
-          <Link
-            href="/estimates"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" />
-            Back to estimates
-          </Link>
+      <EstimateWorkspaceToolbar
+        primaryAction={primaryAction}
+        onPrimaryAction={handlePrimaryAction}
+        reviewLoading={reviewLoading}
+        pending={pending}
+        saveStatus={saveStatus}
+        savedAt={savedAt}
+        onOpenAssemblies={() => setAssembliesOpen(true)}
+        onOpenOverflow={() => setOverflowOpen(true)}
+        showFinalize={showFinalizeSecondary}
+        onFinalize={() => void handleFinalize()}
+      />
 
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {project.customer.company_name}
-            </p>
-            <Link
-              href={`/projects/${project.id}`}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              {project.project_name}
-            </Link>
-            {project.project_address ? (
-              <p className="text-sm text-muted-foreground">
-                {project.project_address}
-              </p>
-            ) : null}
-            <p className="mt-2 inline-flex rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
-              {formatEstimateStatus(status)}
-            </p>
-          </div>
+      {estimateCopilotEnabled && copilotOpen ? (
+        <EstimateCopilotPanel
+          open={copilotOpen}
+          onClose={() => setCopilotOpen(false)}
+          estimateId={estimateId}
+          state={state}
+          context={reviewContext}
+          disabled={isLocked}
+          onApplied={handleAiApplied}
+        />
+      ) : null}
 
-          {status === "Final" ? (
-            <p className="text-sm text-muted-foreground">
-              This estimate is marked final. Reopen it to edit line items or markups.
-            </p>
-          ) : null}
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <label htmlFor="estimate-title" className="text-sm font-medium">
-                Estimate title
-              </label>
-              <input
-                id="estimate-title"
-                value={state.title}
-                disabled={isLocked}
-                onChange={(event) => {
-                  setState((current) => ({
-                    ...current,
-                    title: event.target.value,
-                  }));
-                  markDirty();
-                }}
-                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              />
-            </div>
-
-            <div className="space-y-2 sm:col-span-2">
-              <label htmlFor="estimate-notes" className="text-sm font-medium">
-                Notes
-              </label>
-              <textarea
-                id="estimate-notes"
-                rows={2}
-                value={state.notes}
-                onChange={(event) => {
-                  setState((current) => ({
-                    ...current,
-                    notes: event.target.value,
-                  }));
-                  markDirty();
-                }}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                placeholder="Assumptions, exclusions, or notes for your bid team"
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional — visible on proposals when you generate them from this estimate.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-          <SaveStatusIndicator status={saveStatus} savedAt={savedAt} />
-          <EstimateVersionHistoryButton
-            onClick={() => setHistoryOpen(true)}
-            versionCount={versions.length}
-          />
-          <AiReviewButton onClick={handleOpenReview} loading={reviewLoading} />
-          <EstimateAssistantButton onClick={() => setAssistantOpen(true)} />
-          <EstimateTemplatesButton onClick={() => setTemplatesOpen(true)} />
-          <button
-            type="button"
-            onClick={() => setShortcutsOpen(true)}
-            className="inline-flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label="Keyboard shortcuts"
-          >
-            <Keyboard className="size-4" />
-          </button>
-          <Button variant="outline" onClick={handleGenerateProposal} disabled={pending}>
-            <FileText data-icon="inline-start" />
-            Add proposal
-          </Button>
-          {status === "Draft" ? (
-            <Button variant="outline" onClick={handleFinalize} disabled={pending}>
-              <Lock data-icon="inline-start" />
-              Mark final
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={handleReopen} disabled={pending}>
-              <LockOpen data-icon="inline-start" />
-              Reopen
-            </Button>
-          )}
-          <Button variant="outline" onClick={handleDuplicate} disabled={pending}>
-            <Copy data-icon="inline-start" />
-            Duplicate
-          </Button>
-          <Button variant="outline" onClick={handleDelete} disabled={pending}>
-            Delete
-          </Button>
-          <Button onClick={handleSave} disabled={pending}>
-            <Save data-icon="inline-start" />
-            {pending ? "Saving..." : "Save estimate"}
-          </Button>
-        </div>
-      </div>
-
-      {reviewOpen ? (
+      {!estimateCopilotEnabled && reviewOpen ? (
         <AIReviewPanel
           open={reviewOpen}
           result={reviewResult}
@@ -1110,7 +1014,7 @@ export function EstimateBuilder({
         />
       ) : null}
 
-      {assistantOpen ? (
+      {!estimateCopilotEnabled && assistantOpen ? (
         <EstimateAssistantPanel
           open={assistantOpen}
           onClose={() => setAssistantOpen(false)}
@@ -1143,6 +1047,41 @@ export function EstimateBuilder({
           markDirty();
         }}
       />
+
+      <EstimateBuilderOverflowMenu
+        open={overflowOpen}
+        onClose={() => setOverflowOpen(false)}
+        status={status}
+        pending={pending}
+        onSave={handleSave}
+        onTemplates={() => setTemplatesOpen(true)}
+        onHistory={() => setHistoryOpen(true)}
+        onShortcuts={() => setShortcutsOpen(true)}
+        onGenerateProposal={handleGenerateProposal}
+        onFinalize={() => void handleFinalize()}
+        onReopen={() => void handleReopen()}
+        onDuplicate={handleDuplicate}
+        onDelete={() => void handleDelete()}
+        onAssistant={() => setAssistantOpen(true)}
+        showAssistant={!estimateCopilotEnabled}
+      />
+
+      <Modal
+        open={assembliesOpen}
+        onClose={() => setAssembliesOpen(false)}
+        title="Assemblies library"
+        description="Insert pre-built scope into your estimate."
+        size="xl"
+      >
+        <div className="max-h-[min(70vh,640px)] overflow-y-auto pr-1">
+          <AssembliesLibraryPanel
+            onInsert={(assembly) => {
+              insertAssembly(assembly);
+              setAssembliesOpen(false);
+            }}
+          />
+        </div>
+      </Modal>
 
       <Modal
         open={shortcutsOpen}
@@ -1186,19 +1125,8 @@ export function EstimateBuilder({
         </AlertBanner>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-4">
-          <AiEstimateReviewCard
-            state={state}
-            context={reviewContext}
-            loading={reviewLoading}
-            disabled={isLocked}
-            onOpenFullReview={handleOpenReview}
-            onApplyMarkup={applyProfitMargin}
-          />
-
-          <AssembliesLibraryPanel onInsert={insertAssembly} />
-
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-6">
           {ESTIMATE_CATEGORIES.map((category) => (
             <EstimateSection
               key={category}
@@ -1261,6 +1189,19 @@ export function EstimateBuilder({
           />
         </div>
       </div>
+
+      <EstimateLessonsCompact guidance={guidance} />
+
+      {!estimateCopilotEnabled ? (
+        <EstimateAiInsightsCompact
+          state={state}
+          context={reviewContext}
+          loading={reviewLoading}
+          disabled={isLocked}
+          onOpenFullReview={handleOpenReview}
+          onApplyMarkup={applyProfitMargin}
+        />
+      ) : null}
     </div>
   );
 }

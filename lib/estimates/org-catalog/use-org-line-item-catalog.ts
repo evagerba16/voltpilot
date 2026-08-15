@@ -7,11 +7,12 @@ import type { LineItemCatalog, PickerCatalogCategory } from "@/lib/estimates/lin
 
 export function useOrgLineItemCatalog(category: PickerCatalogCategory): LineItemCatalog {
   const fallback = useMemo(() => getLineItemCatalog(category), [category]);
-  const [catalog, setCatalog] = useState<LineItemCatalog>(fallback);
+  const [catalog, setCatalog] = useState(fallback);
 
   useEffect(() => {
+    setCatalog(fallback);
+
     if (category !== "equipment") {
-      setCatalog(fallback);
       return;
     }
 
@@ -40,5 +41,5 @@ export function useOrgLineItemCatalog(category: PickerCatalogCategory): LineItem
     };
   }, [category, fallback]);
 
-  return category === "equipment" ? catalog : fallback;
+  return catalog;
 }

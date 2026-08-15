@@ -1,5 +1,5 @@
 import { DashboardTopNav } from "@/components/dashboard/top-nav";
-import { PageIntro, PageMain } from "@/components/dashboard/page-main";
+import { PageMain } from "@/components/dashboard/page-main";
 import { EstimatesView } from "@/components/estimates/estimates-view";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import {
@@ -42,8 +42,6 @@ export default async function EstimatesPage({
     <>
       <DashboardTopNav title="Estimates" />
       <PageMain>
-        <PageIntro description="Price jobs with line-item detail—tie estimates to projects and turn them into proposals when you're ready to bid." />
-
         {loadError ? (
           <AlertBanner variant="error" title="Unable to load estimates">
             {loadError}

@@ -12,6 +12,9 @@ type CustomersPaginationProps = {
   search: string;
   sort: string;
   order: string;
+  projects?: string;
+  notes?: string;
+  status?: string;
 };
 
 export function CustomersPagination({
@@ -21,6 +24,9 @@ export function CustomersPagination({
   search,
   sort,
   order,
+  projects,
+  notes,
+  status,
 }: CustomersPaginationProps) {
   const start = total === 0 ? 0 : (page - 1) * 10 + 1;
   const end = Math.min(page * 10, total);
@@ -40,6 +46,9 @@ export function CustomersPagination({
             q: search,
             sort,
             order,
+            projects,
+            notes,
+            status,
           })}
           aria-disabled={page <= 1}
           className={cn(
@@ -61,6 +70,9 @@ export function CustomersPagination({
             q: search,
             sort,
             order,
+            projects,
+            notes,
+            status,
           })}
           aria-disabled={page >= totalPages}
           className={cn(

@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 
 import { DashboardTopNav } from "@/components/dashboard/top-nav";
+import { PageMain } from "@/components/dashboard/page-main";
 import { ProposalEditor } from "@/components/proposals/proposal-editor";
+import { getProposalProfile } from "@/lib/proposals/profile";
+import { buildProposalInsights } from "@/lib/proposals/insights";
 import { getProposalMedia } from "@/lib/proposals/proposal-media-queries";
 import { getProposalById } from "@/lib/proposals/queries";
 
@@ -17,16 +20,27 @@ export default async function ProposalPage({ params }: ProposalPageProps) {
     notFound();
   }
 
-  const media = await getProposalMedia(id);
+  const [media, profile] = await Promise.all([
+    getProposalMedia(id),
+    getProposalProfile(proposal),
+  ]);
+
+  const insights = buildProposalInsights({
+    proposal,
+    analytics: profile.analytics,
+  });
 
   return (
     <>
       <DashboardTopNav title={proposal.title} />
-      <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto p-4 sm:p-6">
-        <div className="mx-auto max-w-7xl">
-          <ProposalEditor proposal={proposal} media={media} />
-        </div>
-      </main>
+      <PageMain className="[&>div]:space-y-10">
+        <ProposalEditor
+          proposal={proposal}
+          media={media}
+          profile={profile}
+          insights={insights}
+        />
+      </PageMain>
     </>
   );
 }

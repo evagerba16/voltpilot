@@ -1,5 +1,7 @@
 import { getOpenAIClient } from "@/lib/ai/client";
 import { getOpenAIConfig } from "@/lib/ai/env";
+import { insightCategoryFromItem, sortInsightsByCategory } from "@/lib/ai/insight-category";
+import { defaultInsightNextAction } from "@/lib/ai/insight-next-action";
 import { parseJsonResponse } from "@/lib/ai/parse-json";
 import type { DashboardInsightItem, DashboardInsightsData } from "@/lib/ai/types";
 import { reviewEstimate } from "@/lib/estimates/review";
@@ -82,8 +84,24 @@ function estimateToBuilderState(estimate: EstimateRow): EstimateBuilderState {
   };
 }
 
+function finalizeInsightItems(
+  items: Omit<DashboardInsightItem, "category">[]
+): DashboardInsightItem[] {
+  const unique = new Map<string, DashboardInsightItem>();
+
+  for (const item of items) {
+    const withCategory: DashboardInsightItem = {
+      ...item,
+      category: insightCategoryFromItem(item),
+    };
+    unique.set(withCategory.id, withCategory);
+  }
+
+  return sortInsightsByCategory(Array.from(unique.values())).slice(0, 20);
+}
+
 function buildDashboardItems(estimates: EstimateRow[]): DashboardInsightItem[] {
-  const items: DashboardInsightItem[] = [];
+  const items: Omit<DashboardInsightItem, "category">[] = [];
 
   for (const estimate of estimates) {
     const project = normalizeProject(estimate.project);
@@ -110,6 +128,7 @@ function buildDashboardItems(estimates: EstimateRow[]): DashboardInsightItem[] {
         severity: criticalCount > 0 ? "critical" : "warning",
         title: `"${estimate.title}" needs review`,
         description: `${criticalCount} critical and ${warningCount} warning item(s) detected by AI review.`,
+        nextAction: defaultInsightNextAction("review_required"),
         href: `/estimates/${estimate.id}`,
         entityLabel: `${customerName} · ${project.project_name}`,
       });
@@ -122,6 +141,7 @@ function buildDashboardItems(estimates: EstimateRow[]): DashboardInsightItem[] {
         severity: margin < 5 ? "critical" : "warning",
         title: `Low margin on "${estimate.title}"`,
         description: `${margin.toFixed(1)}% gross margin — review markup before sending.`,
+        nextAction: defaultInsightNextAction("low_margin"),
         href: `/estimates/${estimate.id}`,
         entityLabel: `${customerName} · ${project.project_name}`,
       });
@@ -135,6 +155,7 @@ function buildDashboardItems(estimates: EstimateRow[]): DashboardInsightItem[] {
         title: `Missing assumptions on "${estimate.title}"`,
         description:
           "Add exclusions, allowances, and site condition notes before proposal generation.",
+        nextAction: defaultInsightNextAction("missing_info"),
         href: `/estimates/${estimate.id}`,
         entityLabel: `${customerName} · ${project.project_name}`,
       });
@@ -148,6 +169,7 @@ function buildDashboardItems(estimates: EstimateRow[]): DashboardInsightItem[] {
         title: `High-risk estimate: "${estimate.title}"`,
         description:
           "Multiple critical flags or thin margin on a large bid. Senior review recommended.",
+        nextAction: defaultInsightNextAction("high_risk"),
         href: `/estimates/${estimate.id}`,
         entityLabel: `${customerName} · ${project.project_name}`,
       });
@@ -165,22 +187,14 @@ function buildDashboardItems(estimates: EstimateRow[]): DashboardInsightItem[] {
         title: `Generate proposal for "${estimate.title}"`,
         description:
           "Estimate pricing is complete. Consider generating a client-ready proposal.",
+        nextAction: defaultInsightNextAction("recommended_action"),
         href: `/estimates/${estimate.id}`,
         entityLabel: `${customerName} · ${project.project_name}`,
       });
     }
   }
 
-  const severityRank = { critical: 0, warning: 1, info: 2 };
-  const unique = new Map<string, DashboardInsightItem>();
-
-  for (const item of items) {
-    unique.set(item.id, item);
-  }
-
-  return Array.from(unique.values())
-    .sort((a, b) => severityRank[a.severity] - severityRank[b.severity])
-    .slice(0, 20);
+  return finalizeInsightItems(items);
 }
 
 type AiSummaryPayload = {
@@ -327,14 +341,16 @@ Return JSON: { "summary": "...", "actions": ["...", "..."] }`,
           severity: "info",
           title: "AI recommended action",
           description: action.trim(),
-          href: "/dashboard",
+          nextAction: "Open command center",
+          href: "/ai",
           entityLabel: "Portfolio",
+          category: "informational",
         });
       });
     }
 
     return {
-      items: items.slice(0, 20),
+      items: sortInsightsByCategory(items).slice(0, 20),
       summary: parsed?.summary?.trim() ?? defaultSummary,
       counts,
       aiEnabled: true,

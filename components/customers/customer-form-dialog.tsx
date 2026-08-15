@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast-provider";
 import type { Customer } from "@/lib/customers/types";
+import { CUSTOMER_STATUSES } from "@/lib/customers/types";
 
 type CustomerFormDialogProps = {
   open: boolean;
@@ -132,6 +133,24 @@ export function CustomerFormDialog({
               className={inputClassName}
               placeholder="(555) 123-4567"
             />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="status" className={labelClassName}>
+              Status
+            </label>
+            <select
+              id="status"
+              name="status"
+              defaultValue={customer?.status ?? "lead"}
+              className={inputClassName}
+            >
+              {CUSTOMER_STATUSES.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-2 sm:col-span-2">
