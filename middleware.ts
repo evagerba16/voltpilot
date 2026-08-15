@@ -1,13 +1,44 @@
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { updateSession } from "@/lib/supabase/middleware";
+/**
+ * Edge middleware must stay tiny and synchronous — no Supabase, fetch, or heavy imports.
+ * Auth validation runs in server layouts via getUser().
+ */
 
-export async function middleware(request: NextRequest) {
-  return await updateSession(request);
+function hasAuthCookie(request: NextRequest) {
+  return request.cookies.getAll().some(
+    (cookie) => cookie.name.includes("-auth-token") || cookie.name.startsWith("sb-")
+  );
 }
 
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (!hasAuthCookie(request)) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  const headers = new Headers(request.headers);
+  headers.set("x-pathname", pathname);
+
+  return NextResponse.next({
+    request: { headers },
+  });
+}
+
+/** Only authenticated app routes — everything else bypasses middleware entirely. */
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/dashboard/:path*",
+    "/ai/:path*",
+    "/customers/:path*",
+    "/projects/:path*",
+    "/estimates/:path*",
+    "/proposals/:path*",
+    "/analytics/:path*",
+    "/settings/:path*",
   ],
 };
