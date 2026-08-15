@@ -29,16 +29,27 @@ export function middleware(request: NextRequest) {
   });
 }
 
-/** Only authenticated app routes — everything else bypasses middleware entirely. */
+/**
+ * Only authenticated app routes — bypassed entirely:
+ * /, /login, /api/*, /p/*, /privacy, /terms, static assets, webhooks.
+ */
 export const config = {
   matcher: [
+    "/dashboard",
     "/dashboard/:path*",
+    "/ai",
     "/ai/:path*",
+    "/customers",
     "/customers/:path*",
+    "/projects",
     "/projects/:path*",
+    "/estimates",
     "/estimates/:path*",
+    "/proposals",
     "/proposals/:path*",
+    "/analytics",
     "/analytics/:path*",
+    "/settings",
     "/settings/:path*",
   ],
 };
