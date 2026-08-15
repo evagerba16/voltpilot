@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { requestPasswordReset } from "@/app/auth/actions";
@@ -14,21 +14,31 @@ type ForgotPasswordFormProps = {
 export function ForgotPasswordForm({ initialError }: ForgotPasswordFormProps) {
   const router = useRouter();
   const [error, setError] = useState(initialError);
+  const [email, setEmail] = useState("");
 
-  useEffect(() => {
-    setError(initialError);
-  }, [initialError]);
+  function handleEmailChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const nextEmail = event.target.value;
+    setEmail(nextEmail);
 
-  function clearStaleErrorState() {
-    if (!error) {
+    if (error === null) {
       return;
     }
 
     setError(null);
 
-    if (typeof window !== "undefined" && window.location.search.includes("error=")) {
-      router.replace("/forgot-password", { scroll: false });
+    if (typeof window === "undefined") {
+      return;
     }
+
+    const { pathname, search } = window.location;
+    if (!search.includes("error=") && !search.includes("attempt=")) {
+      return;
+    }
+
+    // Strip stale params synchronously so remounts during soft navigation
+    // never rehydrate the error from the old URL.
+    window.history.replaceState(null, "", pathname);
+    router.replace(pathname, { scroll: false });
   }
 
   return (
@@ -51,8 +61,8 @@ export function ForgotPasswordForm({ initialError }: ForgotPasswordFormProps) {
             required
             autoComplete="email"
             autoFocus
-            onChange={clearStaleErrorState}
-            onInput={clearStaleErrorState}
+            value={email}
+            onChange={handleEmailChange}
             className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         </div>
