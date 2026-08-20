@@ -1,25 +1,18 @@
-/** Scoped Tailwind classes for the Volt AI page accent (violet/indigo). */
+/** Scoped accent classes for VoltPilot Intelligence surfaces (brand amber). */
 export const voltAiAccent = {
-  gradient:
-    "bg-gradient-to-br from-violet-950 via-indigo-950 to-slate-900",
-  gradientSoft:
-    "bg-gradient-to-br from-violet-500/10 via-indigo-500/5 to-transparent",
-  border: "border-violet-500/20",
-  borderHover: "hover:border-violet-500/35",
-  text: "text-violet-600 dark:text-violet-400",
-  textMuted: "text-violet-600/80 dark:text-violet-400/80",
-  icon: "text-violet-500",
-  button:
-    "bg-violet-600 text-white hover:bg-violet-700 dark:bg-violet-600 dark:hover:bg-violet-500",
-  buttonOutline:
-    "border-violet-500/30 text-violet-700 hover:bg-violet-500/10 dark:text-violet-300",
-  chip:
-    "border-violet-500/25 bg-violet-500/5 text-violet-800 hover:bg-violet-500/15 dark:text-violet-200",
-  ring: "ring-violet-500/30",
-  glow: "shadow-[0_0_24px_-4px_rgba(139,92,246,0.35)]",
-  progress: "bg-violet-500",
-  progressTrack: "bg-violet-500/15",
-  pulse: "motion-safe:animate-[volt-ai-pulse_2.5s_ease-in-out_infinite]",
+  gradient: "bg-gradient-to-br from-stone-900 via-stone-800 to-stone-950",
+  gradientSoft: "bg-[color-mix(in_oklch,var(--card),var(--brand)_3%)]",
+  border: "border-brand/20",
+  borderHover: "hover:border-brand/30",
+  text: "text-brand",
+  textMuted: "text-brand/80",
+  icon: "text-brand",
+  button: "rounded-full bg-brand text-brand-foreground vp-action-glow hover:bg-brand/92",
+  buttonOutline: "rounded-full border-brand/30 text-brand hover:bg-brand/10",
+  chip: "border-brand/25 bg-brand/8 text-brand hover:bg-brand/12",
+  ring: "ring-brand/30",
+  progress: "bg-brand",
+  progressTrack: "bg-brand/15",
 } as const;
 
 export function healthStatusEmoji(score: number) {

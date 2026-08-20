@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button-variants";
 import type { DashboardActionItem } from "@/lib/dashboard/briefing";
+import { vpTheme } from "@/lib/ui/vp-theme";
 import { cn } from "@/lib/utils";
 
 type DashboardTodayPrioritiesProps = {
@@ -20,7 +21,10 @@ export function DashboardTodayPriorities({
     <section>
       <div className="mb-4 flex items-baseline justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">Today&apos;s priorities</h2>
+          <p className="vp-section-label">Today</p>
+          <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+            Today&apos;s priorities
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {isPortfolioEmpty
               ? "Your morning briefing starts here."
@@ -34,14 +38,14 @@ export function DashboardTodayPriorities({
       </div>
 
       {priorities.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border/70 px-4 py-6 text-sm text-muted-foreground">
+        <p className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
           Nothing urgent right now.
         </p>
       ) : (
-        <ul className="divide-y divide-border/60 rounded-xl border border-border/80 bg-card">
+        <ul className={cn(vpTheme.card, "divide-y divide-border/60")}>
           {priorities.map((item) => (
             <li key={item.id}>
-              <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p
                     className={cn(
@@ -57,7 +61,8 @@ export function DashboardTodayPriorities({
                   href={item.href}
                   className={cn(
                     buttonVariants({ size: "sm", variant: item.isRisk ? "default" : "outline" }),
-                    "shrink-0 gap-1.5 rounded-full"
+                    "shrink-0 gap-1.5",
+                    item.isRisk ? vpTheme.primaryCta : undefined
                   )}
                 >
                   {item.ctaLabel}

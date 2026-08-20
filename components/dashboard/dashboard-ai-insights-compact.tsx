@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Info, Lightbulb, TriangleAlert } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
@@ -9,6 +9,8 @@ import {
 } from "@/lib/ai/insight-category";
 import type { DashboardInsightsData } from "@/lib/ai/types";
 import { DASHBOARD_MAX_AI_INSIGHTS } from "@/lib/dashboard/constants";
+import { IntelligenceSectionHeader } from "@/components/ui/intelligence-section-header";
+import { vpTheme } from "@/lib/ui/vp-theme";
 import { cn } from "@/lib/utils";
 
 type DashboardAiInsightsCompactProps = {
@@ -17,22 +19,19 @@ type DashboardAiInsightsCompactProps = {
 
 const categoryStyles: Record<
   DashboardInsightCategory,
-  { row: string; badge: string; icon: typeof Info }
+  { row: string; badge: string }
 > = {
   needs_attention: {
-    row: "border-l-amber-500/40 bg-amber-500/[0.03]",
-    badge: "bg-amber-500/10 text-amber-800 dark:text-amber-300",
-    icon: TriangleAlert,
+    row: vpTheme.insightRowAttention,
+    badge: vpTheme.insightBadgeAttention,
   },
   opportunity: {
-    row: "border-l-violet-500/40 bg-violet-500/[0.03]",
-    badge: "bg-violet-500/10 text-violet-800 dark:text-violet-300",
-    icon: Lightbulb,
+    row: vpTheme.insightRowOpportunity,
+    badge: vpTheme.insightBadgeOpportunity,
   },
   informational: {
-    row: "border-l-border bg-muted/10",
-    badge: "bg-muted text-muted-foreground",
-    icon: Info,
+    row: vpTheme.insightRowInfo,
+    badge: vpTheme.insightBadgeInfo,
   },
 };
 
@@ -41,12 +40,17 @@ export function DashboardAiInsightsCompact({ data }: DashboardAiInsightsCompactP
   const remainingCount = Math.max(0, data.items.length - items.length);
 
   return (
-    <section className="space-y-3">
-      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+    <section className="space-y-4">
+      <IntelligenceSectionHeader
+        title="Actionable insights"
+        description="Recommendations based on your pipeline — each one links to the next step."
+      />
+
+      <div className={vpTheme.intelligenceSurface}>
         {items.length === 0 ? (
           <div className="px-6 py-8 text-center">
             <p className="text-sm text-muted-foreground">
-              No recommendations right now. Create estimates to unlock bid intelligence.
+              Insights appear as your portfolio grows. Create estimates to unlock bid intelligence.
             </p>
             <Link href="/estimates" className={cn(buttonVariants({ size: "sm" }), "mt-4")}>
               Create your first estimate
@@ -56,37 +60,33 @@ export function DashboardAiInsightsCompact({ data }: DashboardAiInsightsCompactP
           <ul className="divide-y divide-border/60">
             {items.map((item) => {
               const styles = categoryStyles[item.category];
-              const CategoryIcon = styles.icon;
 
               return (
                 <li key={item.id}>
                   <Link
                     href={item.href}
                     className={cn(
-                      "block border-l-2 px-6 py-4 transition-colors hover:bg-muted/20",
+                      "vp-interactive-row block px-6 py-4",
                       styles.row
                     )}
                   >
-                    <div className="flex items-start gap-3">
-                      <CategoryIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide",
-                            styles.badge
-                          )}
-                        >
-                          {insightCategoryLabel(item.category)}
-                        </span>
-                        <p className="mt-1.5 text-sm font-medium">{item.title}</p>
-                        <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
-                          {item.description}
-                        </p>
-                        <p className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary">
-                          {item.nextAction}
-                          <ArrowRight className="size-3.5" />
-                        </p>
-                      </div>
+                    <div className="min-w-0">
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide",
+                          styles.badge
+                        )}
+                      >
+                        {insightCategoryLabel(item.category)}
+                      </span>
+                      <p className="mt-1.5 text-sm font-medium text-foreground">{item.title}</p>
+                      <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
+                        {item.description}
+                      </p>
+                      <p className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-brand">
+                        {item.nextAction}
+                        <ArrowRight className="size-3.5" />
+                      </p>
                     </div>
                   </Link>
                 </li>
@@ -96,12 +96,12 @@ export function DashboardAiInsightsCompact({ data }: DashboardAiInsightsCompactP
         )}
 
         {remainingCount > 0 ? (
-          <div className="border-t border-border px-6 py-3">
+          <div className="border-t border-border/60 px-6 py-3">
             <Link
               href="/ai"
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
             >
-              Open command center
+              View all insights
               <ArrowRight className="size-4" />
             </Link>
           </div>

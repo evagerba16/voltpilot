@@ -26,16 +26,16 @@ export function DashboardKpiCard({
   const content = (
     <article
       className={cn(
-        "group relative overflow-hidden rounded-2xl border p-5 shadow-sm transition-all motion-safe:duration-200 hover:shadow-md",
+        "group relative overflow-hidden rounded-xl border p-5 shadow-sm transition-shadow motion-safe:duration-150 hover:shadow-md",
         highlight
-          ? "border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card"
-          : "border-border bg-card hover:border-primary/20"
+          ? "border-brand/25 bg-gradient-to-br from-brand/10 via-card to-card"
+          : "border-border/80 bg-card hover:border-brand/20"
       )}
     >
       {highlight ? (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-8 -top-8 size-28 rounded-full bg-primary/10 blur-2xl"
+          className="pointer-events-none absolute -right-8 -top-8 size-28 rounded-full bg-brand/10 blur-2xl"
         />
       ) : null}
 
@@ -62,7 +62,7 @@ export function DashboardKpiCard({
         <div
           className={cn(
             "flex size-11 shrink-0 items-center justify-center rounded-xl",
-            highlight ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+            highlight ? "bg-brand text-brand-foreground" : "bg-brand/10 text-brand"
           )}
         >
           <Icon className="size-5" />
@@ -70,7 +70,7 @@ export function DashboardKpiCard({
       </div>
 
       {href ? (
-        <div className="relative mt-4 flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="relative mt-4 flex items-center gap-1 text-xs font-medium text-brand opacity-0 transition-opacity group-hover:opacity-100">
           View details
           <ArrowUpRight className="size-3.5" />
         </div>

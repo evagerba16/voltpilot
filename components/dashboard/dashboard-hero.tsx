@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { BarChart3, Sparkles } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 
 import { DashboardGreeting } from "@/components/dashboard/dashboard-greeting";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { ENTITY_PRIMARY_QUESTIONS } from "@/lib/ui/entity-page-copy";
 import type { DashboardPrimaryAction } from "@/lib/dashboard/primary-action";
+import { VP_INTELLIGENCE_LABEL, vpTheme } from "@/lib/ui/vp-theme";
 import { cn } from "@/lib/utils";
 
 type DashboardHeroProps = {
@@ -23,12 +24,10 @@ export function DashboardHero({
   const ActionIcon = primaryAction.icon;
 
   return (
-    <section className="rounded-2xl border border-border bg-card px-6 py-8 shadow-sm sm:px-8 sm:py-10">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-2xl space-y-2">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            Dashboard
-          </p>
+    <section className="vp-surface-hero vp-blueprint-grid rounded-xl px-6 py-8 sm:px-8 sm:py-9">
+      <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-2xl space-y-3">
+          <p className="vp-section-label">Dashboard</p>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             <DashboardGreeting displayName={displayName} />
           </h1>
@@ -42,7 +41,7 @@ export function DashboardHero({
         <div className="flex flex-col gap-3 sm:max-w-xs sm:items-end">
           <Link
             href={primaryAction.href}
-            className={cn(buttonVariants({ className: "gap-2 rounded-full" }))}
+            className={cn(buttonVariants(), vpTheme.primaryCta, "gap-2 px-5")}
           >
             <ActionIcon className="size-4" />
             {primaryAction.label}
@@ -55,17 +54,16 @@ export function DashboardHero({
             <div className="flex flex-wrap justify-end gap-x-4 gap-y-1 text-sm">
               <Link
                 href="/analytics"
-                className="inline-flex items-center gap-1 font-medium text-muted-foreground transition-colors hover:text-primary"
+                className="inline-flex items-center gap-1 font-medium text-muted-foreground transition-colors motion-safe:duration-150 hover:text-foreground"
               >
                 <BarChart3 className="size-3.5" />
                 View Analytics
               </Link>
               <Link
                 href="/ai"
-                className="inline-flex items-center gap-1 font-medium text-muted-foreground transition-colors hover:text-primary"
+                className="font-medium text-muted-foreground transition-colors motion-safe:duration-150 hover:text-brand"
               >
-                <Sparkles className="size-3.5" />
-                Command Center
+                {VP_INTELLIGENCE_LABEL}
               </Link>
             </div>
           ) : null}

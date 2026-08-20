@@ -1,9 +1,6 @@
-import Link from "next/link";
-import { ArrowRight, BarChart3, Sparkles } from "lucide-react";
-
 import { DashboardAiInsightsCompact } from "@/components/dashboard/dashboard-ai-insights-compact";
 import { DashboardContinueWorking } from "@/components/dashboard/dashboard-continue-working";
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { DashboardHero } from "@/components/dashboard/dashboard-hero";
 import { DashboardKpiStrip } from "@/components/dashboard/dashboard-kpi-strip";
 import { DashboardRecentActivity } from "@/components/dashboard/dashboard-recent-activity";
 import { DashboardTodayPriorities } from "@/components/dashboard/dashboard-today-priorities";
@@ -50,10 +47,11 @@ export function DashboardHome({
   const overview = dedupeDashboardQueues(rawOverview);
   return (
     <div className="space-y-10">
-      <DashboardHeader
+      <DashboardHero
         organizationName={organizationName}
         displayName={displayName}
         isPortfolioEmpty={overview.isPortfolioEmpty}
+        primaryAction={overview.primaryAction}
       />
 
       <DashboardTodayPriorities
@@ -68,37 +66,11 @@ export function DashboardHome({
 
       <DashboardRecentActivity items={overview.recentActivity} />
 
-      <section className="space-y-4 border-t border-border/50 pt-10">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-              Business intelligence
-            </p>
-            <h2 className="mt-1 text-sm font-medium text-muted-foreground">
-              Trends and recommendations — for reflection, not immediate work
-            </h2>
-          </div>
-          <Link
-            href="/analytics"
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-primary"
-          >
-            <BarChart3 className="size-3.5" />
-            Open analytics
-            <ArrowRight className="size-3.5" />
-          </Link>
-        </div>
-
-        {aiInsights ? (
+      {aiInsights ? (
+        <section className="space-y-4 border-t border-border/50 pt-10">
           <DashboardAiInsightsCompact data={aiInsights} />
-        ) : (
-          <div className="rounded-xl border border-dashed border-border/70 px-5 py-6 text-center">
-            <Sparkles className="mx-auto size-4 text-muted-foreground" />
-            <p className="mt-2 text-sm text-muted-foreground">
-              Bid intelligence appears here as your portfolio grows.
-            </p>
-          </div>
-        )}
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -116,24 +116,30 @@ export function CustomerProposalView({
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,rgba(248,250,252,1)_0%,rgba(241,245,249,1)_100%)]">
-      <header className="border-b border-border/80 bg-background/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen bg-background">
+      <header className="vp-blueprint-grid border-b border-border/70 bg-card shadow-[0_1px_0_oklch(0.22_0.01_50/0.04)]">
+        <div className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-start gap-4">
             {company.company_logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={company.company_logo_url}
                 alt={`${company.company_name} logo`}
-                className="h-12 w-auto max-w-[160px] object-contain"
+                className="h-14 w-auto max-w-[180px] rounded-lg object-contain"
               />
-            ) : null}
+            ) : (
+              <div className="flex size-14 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-muted/30 text-lg font-bold text-foreground">
+                {company.company_name.slice(0, 1)}
+              </div>
+            )}
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {company.company_name}
+                Proposal from {company.company_name}
               </p>
-              <h1 className="text-xl font-bold sm:text-2xl">{proposal.title}</h1>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                {proposal.title}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
                 {proposal.proposal_number} · {formatCurrency(proposal.amount)}
               </p>
             </div>
@@ -142,7 +148,7 @@ export function CustomerProposalView({
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={cn(
-                "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+                "inline-flex rounded-full px-3 py-1 text-xs font-semibold",
                 PROPOSAL_STATUS_STYLES[proposal.status]
               )}
             >
@@ -158,14 +164,16 @@ export function CustomerProposalView({
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 pb-28 lg:pb-8">
-        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <main className="mx-auto max-w-5xl space-y-6 px-4 py-8 pb-28 sm:px-6 lg:pb-10">
+        <section className="vp-surface-card rounded-xl p-6 sm:p-8">
+          <div className="flex flex-col gap-4 border-b border-border/60 pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-medium">{proposal.project.project_name}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">
+                Prepared for you
+              </p>
+              <p className="mt-2 text-lg font-semibold text-foreground">{proposal.project.project_name}</p>
               <p className="text-sm text-muted-foreground">
-                Prepared for {proposal.customer.contact_name} ·{" "}
-                {proposal.customer.company_name}
+                {proposal.customer.contact_name} · {proposal.customer.company_name}
               </p>
             </div>
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -175,12 +183,14 @@ export function CustomerProposalView({
               ) : null}
             </div>
           </div>
+
+          <div className="mt-6 overflow-hidden rounded-xl border border-border/70 bg-card shadow-[inset_0_1px_0_oklch(1_0_0/0.6)]">
+            <PortalProposalPreview portal={proposal} />
+          </div>
         </section>
 
-        <PortalProposalPreview portal={proposal} />
-
         {proposal.comments.length > 0 ? (
-          <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+          <section className="vp-surface-card rounded-xl p-6 sm:p-8">
             <h2 className="mb-3 flex items-center gap-2 text-base font-semibold">
               <MessageSquare className="size-4" />
               Comments
@@ -200,16 +210,16 @@ export function CustomerProposalView({
         ) : null}
 
         {proposal.status === "Draft" ? (
-          <section className="rounded-2xl border border-dashed border-border bg-muted/20 p-5 text-sm text-muted-foreground sm:p-6">
+          <section className="rounded-xl border border-dashed border-border bg-muted/20 p-5 text-sm text-muted-foreground sm:p-6">
             This proposal has not been sent yet. Contact your contractor if you
             believe you received this link in error.
           </section>
         ) : null}
 
         {canRespond ? (
-          <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+          <section className="vp-surface-card rounded-xl p-6 sm:p-8">
             <div className="flex items-start gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand/12 text-brand">
                 <ShieldCheck className="size-5" />
               </div>
               <div className="min-w-0 flex-1">
@@ -270,7 +280,11 @@ export function CustomerProposalView({
             ) : null}
 
             <div className="mt-6 flex flex-wrap gap-2">
-              <Button onClick={() => handleResponse("accept")} disabled={pending}>
+              <Button
+                className="vp-action-glow rounded-full"
+                onClick={() => handleResponse("accept")}
+                disabled={pending}
+              >
                 <Check data-icon="inline-start" />
                 {pending ? "Submitting..." : "Accept proposal"}
               </Button>
@@ -293,7 +307,7 @@ export function CustomerProposalView({
             </div>
           </section>
         ) : (
-          <section className="rounded-2xl border border-border bg-card p-5 text-sm shadow-sm sm:p-6">
+          <section className="vp-surface-card rounded-xl p-6 text-sm sm:p-8">
             <p className="font-medium">This proposal is no longer open for changes.</p>
             <p className="text-muted-foreground">
               Status: {statusLabel}
@@ -314,10 +328,10 @@ export function CustomerProposalView({
       </main>
 
       {canRespond ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 p-4 backdrop-blur lg:hidden">
-          <div className="mx-auto flex max-w-6xl gap-2">
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border/70 bg-card/95 p-4 shadow-[0_-8px_24px_-12px_oklch(0.22_0.01_50/0.15)] backdrop-blur-md lg:hidden">
+          <div className="mx-auto flex max-w-5xl gap-2">
             <Button
-              className="flex-1"
+              className="vp-action-glow flex-1 rounded-full"
               onClick={() => handleResponse("accept")}
               disabled={pending}
             >

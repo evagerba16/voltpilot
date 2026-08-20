@@ -35,7 +35,7 @@ export function VoltAiAskPanel({
       <div className={cn("border-b px-6 py-5", voltAiAccent.gradientSoft, voltAiAccent.border)}>
         <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
           <span
-            className={cn("inline-flex", isPending && voltAiAccent.pulse)}
+            className={cn("inline-flex", isPending && "motion-safe:animate-pulse")}
             aria-hidden="true"
           >
             🤖

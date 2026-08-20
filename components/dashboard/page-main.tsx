@@ -25,11 +25,11 @@ export function PageMain({
       id="main-content"
       tabIndex={-1}
       className={cn(
-        "flex-1 overflow-y-auto p-4 outline-none motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 sm:p-6",
+        "vp-page-canvas flex-1 overflow-y-auto p-4 outline-none motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200 sm:p-6",
         className
       )}
     >
-      <div className={cn("mx-auto space-y-6", widthClasses[width])}>{children}</div>
+      <div className={cn("mx-auto space-y-10", widthClasses[width])}>{children}</div>
     </main>
   );
 }

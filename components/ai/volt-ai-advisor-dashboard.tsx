@@ -30,27 +30,21 @@ function SectionHeading({
   emoji,
   title,
   badge,
-  index = 0,
 }: {
   emoji?: string;
   title: string;
   badge?: string;
-  index?: number;
 }) {
   return (
     <div
-      className={cn(
-        "flex items-center justify-between gap-3",
-        "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:fill-mode-backwards motion-safe:duration-500"
-      )}
-      style={{ animationDelay: `${index * 40}ms` }}
+      className="flex items-center justify-between gap-3"
     >
       <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
         {emoji ? <span aria-hidden="true">{emoji}</span> : null}
         {title}
       </h2>
       {badge ? (
-        <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-700 dark:text-violet-300">
+        <span className="rounded-full bg-brand/10 px-2.5 py-1 text-xs font-medium text-brand">
           {badge}
         </span>
       ) : null}
@@ -97,46 +91,39 @@ export function VoltAiAdvisorDashboard({
   }
 
   return (
-    <div className={cn("space-y-8", voltAiAccent.glow)}>
+    <div className="space-y-8">
       {/* Header + Business Health */}
       <section
         className={cn(
-          "relative overflow-hidden rounded-2xl border shadow-sm",
+          "vp-blueprint-grid relative overflow-hidden rounded-xl border shadow-sm",
           voltAiAccent.gradient,
           voltAiAccent.border
         )}
       >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.25),transparent_55%)]"
-        />
-
         <div className="relative border-b border-white/10 px-6 py-6 text-white">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div className="flex items-start gap-4">
               <div
                 className={cn(
-                  "flex size-12 shrink-0 items-center justify-center rounded-xl bg-violet-500/20 ring-1 ring-violet-400/30",
-                  voltAiAccent.pulse
+                  "flex size-12 shrink-0 items-center justify-center rounded-lg bg-brand/20 ring-1 ring-brand/30",
                 )}
               >
-                <Bot className="size-6 text-violet-200" />
+                <Bot className="size-6 text-brand-foreground/90" />
               </div>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-violet-200/80">
-                    🤖 Volt AI
+                  <p className="text-xs font-semibold uppercase tracking-widest text-brand-foreground/80">
+                    VoltPilot Intelligence
                   </p>
-                  <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-100 ring-1 ring-violet-400/30">
-                    AI Advisor
+                  <span className="rounded-full bg-brand/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-foreground ring-1 ring-brand/30">
+                    Business advisor
                   </span>
                 </div>
                 <h1 className="mt-1 text-xl font-semibold tracking-tight">
                   Command Center
                 </h1>
-                <p className="mt-1 text-sm text-white/60">
-                  Business-wide pipeline, forecasts, and portfolio health. Entity work stays
-                  on the page you&apos;re working in.
+                <p className="mt-1 text-sm text-white/70">
+                  Actionable insights across your pipeline, forecasts, and portfolio health.
                 </p>
                 <p className="mt-2 text-xs text-white/50">
                   Last updated{" "}
@@ -170,7 +157,6 @@ export function VoltAiAdvisorDashboard({
           emoji="📈"
           title={`Key Insights (${data.keyInsights.length})`}
           badge={!data.aiEnabled ? "Standard recommendations" : undefined}
-          index={1}
         />
 
         {data.isEmpty ? (
@@ -205,7 +191,7 @@ export function VoltAiAdvisorDashboard({
         )}
       >
         <div className="border-b border-border px-6 py-4">
-          <SectionHeading emoji="🎯" title="Recommended Actions" index={2} />
+          <SectionHeading emoji="🎯" title="Recommended Actions" />
         </div>
         <div className="grid gap-6 p-6 lg:grid-cols-2">
           {highPriority.length > 0 ? (
@@ -252,7 +238,7 @@ export function VoltAiAdvisorDashboard({
 
       {/* Forecast */}
       <section className="space-y-3">
-        <SectionHeading emoji="📊" title="Forecast" index={3} />
+        <SectionHeading emoji="📊" title="Forecast" />
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {data.forecastTiles.map((tile, index) => (
             <VoltAiForecastCard key={tile.id} tile={tile} index={index} />
@@ -273,7 +259,7 @@ export function VoltAiAdvisorDashboard({
 
       {/* AI Performance */}
       <section className="space-y-3">
-        <SectionHeading emoji="📈" title="AI Performance" index={4} />
+        <SectionHeading emoji="📈" title="AI Performance" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {data.performance.metrics.map((metric, index) => (
             <VoltAiKpiCard key={metric.id} metric={metric} index={index} />

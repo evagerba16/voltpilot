@@ -13,23 +13,20 @@ type VoltAiInsightCardProps = {
 };
 
 const toneStyles = {
-  warning: "border-amber-500/20 bg-amber-500/5",
+  warning: "border-brand/25 bg-brand/5",
   success: "border-emerald-500/20 bg-emerald-500/5",
-  info: "border-violet-500/20 bg-violet-500/5",
-  opportunity: "border-indigo-500/20 bg-indigo-500/5",
+  info: "border-border/80 bg-muted/20",
+  opportunity: "border-brand/20 bg-brand/[0.03]",
 } as const;
 
-export function VoltAiInsightCard({ insight, index = 0 }: VoltAiInsightCardProps) {
+export function VoltAiInsightCard({ insight }: VoltAiInsightCardProps) {
   return (
     <article
       className={cn(
-        "group flex h-full flex-col gap-3 rounded-xl border p-5 shadow-sm transition-all motion-safe:duration-300",
-        "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:fill-mode-backwards",
-        "hover:-translate-y-0.5 hover:shadow-md",
+        "group flex h-full flex-col gap-3 rounded-xl border p-5 shadow-sm transition-shadow motion-safe:duration-150 hover:shadow-md",
         voltAiAccent.borderHover,
         toneStyles[insight.tone]
       )}
-      style={{ animationDelay: `${index * 70}ms` }}
     >
       <div className="space-y-1">
         <h3 className="flex items-center gap-2 text-sm font-semibold leading-snug">

@@ -115,8 +115,7 @@ export function VoltAiBusinessHealthCard({ health }: VoltAiBusinessHealthProps) 
       <div
         aria-hidden="true"
         className={cn(
-          "pointer-events-none absolute -right-6 -top-6 size-24 rounded-full bg-violet-500/20 blur-2xl",
-          voltAiAccent.pulse
+          "pointer-events-none absolute -right-6 -top-6 size-24 rounded-full bg-brand/15 blur-2xl"
         )}
       />
     </div>
