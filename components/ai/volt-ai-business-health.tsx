@@ -1,7 +1,7 @@
 "use client";
 
 import type { VoltAiBusinessHealth } from "@/lib/ai/business-advisor";
-import { healthStatusEmoji, voltAiAccent } from "@/lib/ai/volt-ai-theme";
+import { healthStatusEmoji } from "@/lib/ai/volt-ai-theme";
 import { cn } from "@/lib/utils";
 
 import { VoltAiCountUp } from "./volt-ai-count-up";
@@ -17,13 +17,13 @@ function HealthBar({ score }: { score: number }) {
   return (
     <div className="flex items-center gap-2">
       <div
-        className="font-mono text-sm tracking-widest text-white/90"
+        className="font-mono text-sm tracking-widest text-foreground/80"
         aria-hidden="true"
       >
         {"█".repeat(filled)}
         {"░".repeat(empty)}
       </div>
-      <span className="text-sm font-semibold tabular-nums text-white/80">
+      <span className="text-sm font-semibold tabular-nums text-muted-foreground">
         {score}%
       </span>
     </div>
@@ -43,7 +43,7 @@ function CircularProgress({ score }: { score: number }) {
           cy="50"
           r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.12)"
+          stroke="oklch(0.22 0.01 50 / 0.08)"
           strokeWidth="8"
         />
         <circle
@@ -60,13 +60,13 @@ function CircularProgress({ score }: { score: number }) {
         />
         <defs>
           <linearGradient id="voltAiHealthGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#a78bfa" />
-            <stop offset="100%" stopColor="#6366f1" />
+            <stop offset="0%" stopColor="oklch(0.72 0.14 45)" />
+            <stop offset="100%" stopColor="oklch(0.58 0.14 45)" />
           </linearGradient>
         </defs>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-bold tabular-nums text-white">
+        <span className="text-3xl font-bold tabular-nums text-foreground">
           <VoltAiCountUp value={score} />
         </span>
       </div>
@@ -78,8 +78,8 @@ export function VoltAiBusinessHealthCard({ health }: VoltAiBusinessHealthProps) 
   const statusEmoji = healthStatusEmoji(health.score);
 
   return (
-    <div className="relative flex flex-col gap-5 rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-right-2 motion-safe:duration-500">
-      <div className="flex items-center gap-2 text-sm font-medium text-white/90">
+    <div className="relative flex flex-col gap-5 rounded-xl border border-border/80 bg-muted/20 p-5 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-right-2 motion-safe:duration-500">
+      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
         <span aria-hidden="true">{statusEmoji}</span>
         Business Health
       </div>
@@ -87,23 +87,23 @@ export function VoltAiBusinessHealthCard({ health }: VoltAiBusinessHealthProps) 
       <div className="flex items-center gap-5">
         <CircularProgress score={health.score} />
         <div className="min-w-0 space-y-1">
-          <p className="text-2xl font-semibold text-white">{health.rating}</p>
+          <p className="text-2xl font-semibold text-foreground">{health.rating}</p>
           <HealthBar score={health.score} />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-4 text-xs text-white/75 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 border-t border-border/70 pt-4 text-xs text-muted-foreground lg:grid-cols-4">
         {health.indicators.map((indicator) => (
           <div key={indicator.id} className="flex items-center gap-1.5">
-            <span className="font-medium">{indicator.label}</span>
+            <span className="font-medium text-foreground">{indicator.label}</span>
             <span
               className={cn(
                 "font-semibold",
                 indicator.trend === "up"
-                  ? "text-emerald-400"
+                  ? "text-emerald-600"
                   : indicator.trend === "down"
-                    ? "text-red-400"
-                    : "text-white/50"
+                    ? "text-red-600"
+                    : "text-muted-foreground"
               )}
             >
               {indicator.trend === "up" ? "↑" : indicator.trend === "down" ? "↓" : "→"}
@@ -115,7 +115,7 @@ export function VoltAiBusinessHealthCard({ health }: VoltAiBusinessHealthProps) 
       <div
         aria-hidden="true"
         className={cn(
-          "pointer-events-none absolute -right-6 -top-6 size-24 rounded-full bg-brand/15 blur-2xl"
+          "pointer-events-none absolute -right-6 -top-6 size-24 rounded-full bg-brand/10 blur-2xl"
         )}
       />
     </div>

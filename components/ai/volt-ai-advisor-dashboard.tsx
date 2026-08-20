@@ -19,6 +19,7 @@ import { RelativeTime } from "@/components/ui/relative-time";
 import type { VoltAiAdvisorViewModel } from "@/lib/ai/business-advisor";
 import type { CopilotSuggestion } from "@/lib/ai/proactive-copilot";
 import { voltAiAccent } from "@/lib/ai/volt-ai-theme";
+import { VP_INTELLIGENCE_LABEL, vpTheme } from "@/lib/ui/vp-theme";
 import { cn } from "@/lib/utils";
 
 type VoltAiAdvisorDashboardProps = {
@@ -93,41 +94,32 @@ export function VoltAiAdvisorDashboard({
   return (
     <div className="space-y-8">
       {/* Header + Business Health */}
-      <section
-        className={cn(
-          "vp-blueprint-grid relative overflow-hidden rounded-xl border shadow-sm",
-          voltAiAccent.gradient,
-          voltAiAccent.border
-        )}
-      >
-        <div className="relative border-b border-white/10 px-6 py-6 text-white">
+      <section className="vp-surface-hero vp-blueprint-grid rounded-xl">
+        <div className="relative border-b border-border/70 px-6 py-6">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div className="flex items-start gap-4">
-              <div
-                className={cn(
-                  "flex size-12 shrink-0 items-center justify-center rounded-lg bg-brand/20 ring-1 ring-brand/30",
-                )}
-              >
-                <Bot className="size-6 text-brand-foreground/90" />
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-brand/10 ring-1 ring-brand/20">
+                <Bot className="size-6 text-brand" />
               </div>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-brand-foreground/80">
-                    VoltPilot Intelligence
+                  <p className={vpTheme.intelligenceBadge}>
+                    <Sparkles className="size-3" aria-hidden="true" />
+                    {VP_INTELLIGENCE_LABEL}
                   </p>
-                  <span className="rounded-full bg-brand/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-foreground ring-1 ring-brand/30">
+                  <span className="rounded-full border border-border/80 bg-muted/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     Business advisor
                   </span>
                 </div>
-                <h1 className="mt-1 text-xl font-semibold tracking-tight">
+                <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground">
                   Command Center
                 </h1>
-                <p className="mt-1 text-sm text-white/70">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Actionable insights across your pipeline, forecasts, and portfolio health.
                 </p>
-                <p className="mt-2 text-xs text-white/50">
+                <p className="mt-2 text-xs text-muted-foreground">
                   Last updated{" "}
-                  <RelativeTime value={data.generatedAt} className="text-white/70" />
+                  <RelativeTime value={data.generatedAt} className="text-muted-foreground" />
                 </p>
               </div>
             </div>
