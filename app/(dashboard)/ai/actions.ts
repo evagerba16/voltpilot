@@ -2,6 +2,12 @@
 
 import { assertPermission } from "@/lib/auth/get-team-context";
 import { getOpenAIClient } from "@/lib/ai/client";
+import {
+  resolveVoltAiAskOpenAiFailure,
+  rulesAnswerFallback,
+  VOLT_AI_GENERIC_ERROR,
+  type VoltAiAskResponse,
+} from "@/lib/ai/volt-ai-ask-fallback";
 import { getOpenAIConfig } from "@/lib/ai/env";
 import { parseJsonResponse } from "@/lib/ai/parse-json";
 import { getDashboardInsights } from "@/lib/ai/dashboard-insights";
@@ -599,7 +605,10 @@ function answerVoltAiFromRules(question: string, analytics: AnalyticsData) {
   ].join(" ");
 }
 
-export async function askVoltAi(question: string, context?: VoltAiContextParams) {
+export async function askVoltAi(
+  question: string,
+  context?: VoltAiContextParams
+): Promise<VoltAiAskResponse> {
   await assertPermission("ai.view");
 
   const trimmed = question.trim();
@@ -608,31 +617,36 @@ export async function askVoltAi(question: string, context?: VoltAiContextParams)
   }
 
   const contextualQuestion = `${contextPromptPrefix(context)}${trimmed}`;
+  let rulesAnswer = "";
 
   try {
     const analytics = await getAnalyticsData(analyticsFiltersForContext(context));
-    const rulesAnswer = answerVoltAiFromRules(contextualQuestion, analytics);
+    rulesAnswer = answerVoltAiFromRules(contextualQuestion, analytics);
     const { isConfigured } = getOpenAIConfig();
     const client = getOpenAIClient();
 
     if (!isConfigured || !client) {
-      return { answer: rulesAnswer, source: "rules" as const };
+      return (
+        rulesAnswerFallback(rulesAnswer) ?? { error: VOLT_AI_GENERIC_ERROR }
+      );
     }
 
     const { model } = getOpenAIConfig();
-    const completionPromise = client.chat.completions.create({
-      model,
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are Volt AI, a concise business advisor for electrical contractors. Answer in 2-4 sentences using only the provided metrics.",
-        },
-        {
-          role: "user",
-          content: `Question: ${contextualQuestion}
+
+    try {
+      const completionPromise = client.chat.completions.create({
+        model,
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are Volt AI, a concise business advisor for electrical contractors. Answer in 2-4 sentences using only the provided metrics.",
+          },
+          {
+            role: "user",
+            content: `Question: ${contextualQuestion}
 
 Metrics:
 - Pipeline value: ${formatCurrency(analytics.executive.pipelineValue)}
@@ -649,30 +663,30 @@ Rule-based draft answer:
 ${rulesAnswer}
 
 Return JSON: { "answer": "..." }`,
-        },
-      ],
-    });
+          },
+        ],
+      });
 
-    const completion = await Promise.race([
-      completionPromise,
-      new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("OpenAI answer timed out")), 4000);
-      }),
-    ]);
+      const completion = await Promise.race([
+        completionPromise,
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("OpenAI answer timed out")), 4000);
+        }),
+      ]);
 
-    const content = completion.choices[0]?.message?.content ?? "";
-    const parsed = parseJsonResponse<{ answer?: string }>(content);
+      const content = completion.choices[0]?.message?.content ?? "";
+      const parsed = parseJsonResponse<{ answer?: string }>(content);
 
-    return {
-      answer: parsed?.answer?.trim() || rulesAnswer,
-      source: parsed?.answer ? ("openai" as const) : ("rules" as const),
-    };
-  } catch (error) {
-    return {
-      error:
-        error instanceof Error
-          ? error.message
-          : "Unable to answer right now. Try again in a moment.",
-    };
+      return {
+        answer: parsed?.answer?.trim() || rulesAnswer,
+        source: parsed?.answer ? ("openai" as const) : ("rules" as const),
+      };
+    } catch {
+      return resolveVoltAiAskOpenAiFailure(rulesAnswer);
+    }
+  } catch {
+    return (
+      rulesAnswerFallback(rulesAnswer) ?? { error: VOLT_AI_GENERIC_ERROR }
+    );
   }
 }
