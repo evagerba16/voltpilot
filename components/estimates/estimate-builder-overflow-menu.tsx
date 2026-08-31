@@ -19,6 +19,8 @@ type EstimateBuilderOverflowMenuProps = {
   onClose: () => void;
   status: EstimateStatus;
   pending?: boolean;
+  canMarkFinal?: boolean;
+  canAddProposal?: boolean;
   onSave: () => void;
   onTemplates: () => void;
   onHistory: () => void;
@@ -37,6 +39,8 @@ export function EstimateBuilderOverflowMenu({
   onClose,
   status,
   pending = false,
+  canMarkFinal = true,
+  canAddProposal = true,
   onSave,
   onTemplates,
   onHistory,
@@ -116,7 +120,12 @@ export function EstimateBuilderOverflowMenu({
             variant="ghost"
             className="w-full justify-start"
             onClick={() => run(onGenerateProposal)}
-            disabled={pending}
+            disabled={pending || !canAddProposal}
+            title={
+              canAddProposal
+                ? undefined
+                : "Add line items with unit costs before creating a proposal."
+            }
           >
             <FileText data-icon="inline-start" />
             Add proposal
@@ -128,7 +137,12 @@ export function EstimateBuilderOverflowMenu({
               variant="ghost"
               className="w-full justify-start"
               onClick={() => run(onFinalize)}
-              disabled={pending}
+              disabled={pending || !canMarkFinal}
+              title={
+                canMarkFinal
+                  ? undefined
+                  : "Add line items with unit costs before marking this estimate final."
+              }
             >
               <Lock data-icon="inline-start" />
               Mark final

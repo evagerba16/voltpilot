@@ -5,6 +5,7 @@ import type { EstimateTotals } from "@/lib/estimates/types";
 
 type EstimateSummaryProps = {
   totals: EstimateTotals;
+  showNotPricedYet?: boolean;
   overheadPercent: number;
   contingencyPercent: number;
   profitMarginPercent: number;
@@ -21,6 +22,7 @@ const percentInputClassName =
 function SummaryRow({
   label,
   amount,
+  amountLabel,
   percent,
   onPercentChange,
   emphasized = false,
@@ -28,6 +30,7 @@ function SummaryRow({
 }: {
   label: string;
   amount: number;
+  amountLabel?: string;
   percent?: number;
   onPercentChange?: (value: number) => void;
   emphasized?: boolean;
@@ -76,7 +79,7 @@ function SummaryRow({
               : "text-sm font-medium tabular-nums"
         }
       >
-        {formatCurrency(amount)}
+        {amountLabel ?? formatCurrency(amount)}
       </span>
     </div>
   );
@@ -84,6 +87,7 @@ function SummaryRow({
 
 export function EstimateSummary({
   totals,
+  showNotPricedYet = false,
   overheadPercent,
   contingencyPercent,
   profitMarginPercent,
@@ -149,6 +153,7 @@ export function EstimateSummary({
         <SummaryRow
           label="Final selling price"
           amount={totals.finalSellingPrice}
+          amountLabel={showNotPricedYet ? "Not priced yet" : undefined}
           emphasized
         />
 

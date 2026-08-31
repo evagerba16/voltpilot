@@ -6,6 +6,9 @@ import { redirect } from "next/navigation";
 import { assertPermission } from "@/lib/auth/get-team-context";
 import { calculateEstimateTotals, roundCurrency } from "@/lib/estimates/calculations";
 import {
+  validateEstimatePricing,
+} from "@/lib/estimates/pricing-state";
+import {
   ESTIMATE_CATEGORIES,
   type EstimateBuilderState,
   type EstimateCategory,
@@ -511,6 +514,12 @@ export async function duplicateEstimate(estimateId: string) {
 export async function finalizeEstimate(estimateId: string) {
   const context = await assertPermission("estimates.edit");
 
+  const result = await getEstimateById(estimateId);
+
+  if (!result) {
+    return { error: "This estimate could not be found." };
+  }
+
   const ownsEstimate = await verifyEstimateOwnership(
     estimateId,
     context.organizationId
@@ -518,6 +527,18 @@ export async function finalizeEstimate(estimateId: string) {
 
   if (!ownsEstimate) {
     return { error: "This estimate could not be found." };
+  }
+
+  const builderState = mapEstimateToBuilderState(result.estimate, result.lineItems);
+  const pricingCheck = validateEstimatePricing(builderState.line_items, {
+    overhead_percent: builderState.overhead_percent,
+    contingency_percent: builderState.contingency_percent,
+    profit_margin_percent: builderState.profit_margin_percent,
+    tax_percent: builderState.tax_percent,
+  });
+
+  if (!pricingCheck.ok) {
+    return { error: pricingCheck.error };
   }
 
   const supabase = await createClient();

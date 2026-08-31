@@ -78,6 +78,12 @@ import {
   resolveEstimatePrimaryAction,
   shouldShowFinalizeSecondary,
 } from "@/lib/estimates/primary-action";
+import {
+  formatEstimateStatusLabel,
+  hasPricedContent as estimateHasPricedContent,
+  hasValidLineItems,
+  isUnpricedFinalEstimate,
+} from "@/lib/estimates/pricing-state";
 import type { EstimateGuidance } from "@/lib/lessons/types";
 
 const estimateCopilotEnabled = isEstimateCopilotEnabled();
@@ -116,10 +122,6 @@ type EstimateBuilderProps = {
 };
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
-
-function formatEstimateStatus(status: EstimateStatus) {
-  return status === "Draft" ? "In progress" : "Final";
-}
 
 function serializeState(state: EstimateBuilderState) {
   return JSON.stringify(state);
@@ -168,11 +170,38 @@ export function EstimateBuilder({
   const isLocked = status === "Final";
 
   const hasLineItems = useMemo(
-    () =>
-      state.line_items.some(
-        (item) => item.quantity > 0 && item.description.trim().length > 0
-      ),
+    () => hasValidLineItems(state.line_items),
     [state.line_items]
+  );
+
+  const pricingPercents = useMemo(
+    () => ({
+      overhead_percent: state.overhead_percent,
+      contingency_percent: state.contingency_percent,
+      profit_margin_percent: state.profit_margin_percent,
+      tax_percent: state.tax_percent,
+    }),
+    [
+      state.overhead_percent,
+      state.contingency_percent,
+      state.profit_margin_percent,
+      state.tax_percent,
+    ]
+  );
+
+  const hasPricedContent = useMemo(
+    () => estimateHasPricedContent(state.line_items, pricingPercents),
+    [state.line_items, pricingPercents]
+  );
+
+  const isUnpricedFinal = useMemo(
+    () => isUnpricedFinalEstimate(status, state.line_items, pricingPercents),
+    [status, state.line_items, pricingPercents]
+  );
+
+  const statusLabel = useMemo(
+    () => formatEstimateStatusLabel(status, state.line_items, pricingPercents),
+    [status, state.line_items, pricingPercents]
   );
 
   const primaryAction = useMemo(
@@ -180,12 +209,13 @@ export function EstimateBuilder({
       resolveEstimatePrimaryAction({
         status,
         hasLineItems,
+        hasPricedContent,
         copilotEnabled: estimateCopilotEnabled,
       }),
-    [status, hasLineItems]
+    [status, hasLineItems, hasPricedContent]
   );
 
-  const showFinalizeSecondary = shouldShowFinalizeSecondary({ status, hasLineItems });
+  const showFinalizeSecondary = shouldShowFinalizeSecondary({ status, hasPricedContent });
 
   const reviewContext = useMemo(
     () => ({
@@ -960,7 +990,7 @@ export function EstimateBuilder({
     <div className="space-y-10">
       <EstimateWorkspaceHeader
         project={project}
-        statusLabel={formatEstimateStatus(status)}
+        statusLabel={statusLabel}
         title={state.title}
         isLocked={isLocked}
         onTitleChange={(value) => {
@@ -973,6 +1003,13 @@ export function EstimateBuilder({
           markDirty();
         }}
       />
+
+      {isUnpricedFinal ? (
+        <AlertBanner variant="info" title="This estimate is not priced yet">
+          Reopen it and add line items with unit costs before creating a proposal or
+          sending a bid to your customer.
+        </AlertBanner>
+      ) : null}
 
       <EstimateWorkspaceToolbar
         primaryAction={primaryAction}
@@ -1053,6 +1090,8 @@ export function EstimateBuilder({
         onClose={() => setOverflowOpen(false)}
         status={status}
         pending={pending}
+        canMarkFinal={hasPricedContent}
+        canAddProposal={hasPricedContent}
         onSave={handleSave}
         onTemplates={() => setTemplatesOpen(true)}
         onHistory={() => setHistoryOpen(true)}
@@ -1154,6 +1193,7 @@ export function EstimateBuilder({
         >
           <EstimateSummary
             totals={totals}
+            showNotPricedYet={!hasPricedContent}
             overheadPercent={state.overhead_percent}
             contingencyPercent={state.contingency_percent}
             profitMarginPercent={state.profit_margin_percent}

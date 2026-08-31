@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import {
@@ -37,6 +38,7 @@ import {
   ProposalAssistantPanel,
 } from "@/components/ai/proposal-assistant-panel";
 import { useConfirm } from "@/components/ui/confirm-provider";
+import { AlertBanner } from "@/components/ui/alert-banner";
 import { useToast } from "@/components/ui/toast-provider";
 import { mapProposalToEditorState } from "@/lib/proposals/build-from-estimate";
 import { formatCurrency } from "@/lib/proposals/format";
@@ -396,9 +398,24 @@ export function ProposalEditor({
 
       {!isAccepted ? (
         <ProposalWorkspacePriceContext
-          amount={formatCurrency(proposal.amount)}
+          amount={
+            proposal.amount > 0 ? formatCurrency(proposal.amount) : "Not priced yet"
+          }
           grossMarginPercent={grossMarginLabel}
         />
+      ) : null}
+
+      {!isAccepted && proposal.amount <= 0 && proposal.estimate ? (
+        <AlertBanner variant="info" title="This proposal has no bid price yet">
+          Reopen the{" "}
+          <Link
+            href={`/estimates/${proposal.estimate.id}`}
+            className="font-medium underline underline-offset-2"
+          >
+            source estimate
+          </Link>{" "}
+          and add line items with unit costs before sending this bid.
+        </AlertBanner>
       ) : null}
 
       {isAccepted ? (

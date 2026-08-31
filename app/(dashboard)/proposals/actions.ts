@@ -39,7 +39,8 @@ import {
   markProposalAsAccepted,
   updateProjectStatusAfterProposalAccepted,
 } from "@/lib/proposals/proposal-status-service";
-import { getEstimateById } from "@/lib/estimates/queries";
+import { getEstimateById, mapEstimateToBuilderState } from "@/lib/estimates/queries";
+import { validateEstimatePricing } from "@/lib/estimates/pricing-state";
 import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/site-url";
 import type { ProposalEditorState } from "@/lib/proposals/types";
@@ -167,6 +168,18 @@ export async function createProposalFromEstimate(estimateId: string) {
 
   if (!result) {
     return { error: "Estimate was not found." };
+  }
+
+  const builderState = mapEstimateToBuilderState(result.estimate, result.lineItems);
+  const pricingCheck = validateEstimatePricing(builderState.line_items, {
+    overhead_percent: builderState.overhead_percent,
+    contingency_percent: builderState.contingency_percent,
+    profit_margin_percent: builderState.profit_margin_percent,
+    tax_percent: builderState.tax_percent,
+  });
+
+  if (!pricingCheck.ok) {
+    return { error: pricingCheck.error };
   }
 
   const company = await getCompanySettings(context.organizationId, context.userId);

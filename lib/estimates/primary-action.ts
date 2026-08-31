@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { FileText, Layers, Sparkles } from "lucide-react";
+import { FileText, Layers, LockOpen, Sparkles } from "lucide-react";
 
 import type { EstimateStatus } from "@/lib/estimates/types";
 
@@ -21,6 +21,7 @@ export type EstimatePrimaryAction = {
 type ResolveEstimatePrimaryActionInput = {
   status: EstimateStatus;
   hasLineItems: boolean;
+  hasPricedContent: boolean;
   copilotEnabled: boolean;
 };
 
@@ -29,6 +30,16 @@ export function resolveEstimatePrimaryAction(
   input: ResolveEstimatePrimaryActionInput
 ): EstimatePrimaryAction {
   if (input.status === "Final") {
+    if (!input.hasPricedContent) {
+      return {
+        label: "Reopen to add pricing",
+        kind: "reopen",
+        icon: LockOpen,
+        context:
+          "This estimate is marked final but has no bid price yet. Reopen it and add line items with unit costs.",
+      };
+    }
+
     return {
       label: "Add proposal",
       kind: "proposal",
@@ -66,7 +77,7 @@ export function resolveEstimatePrimaryAction(
 /** Secondary finalize action when primary is AI review. */
 export function shouldShowFinalizeSecondary(input: {
   status: EstimateStatus;
-  hasLineItems: boolean;
+  hasPricedContent: boolean;
 }): boolean {
-  return input.status === "Draft" && input.hasLineItems;
+  return input.status === "Draft" && input.hasPricedContent;
 }

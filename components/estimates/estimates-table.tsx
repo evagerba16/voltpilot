@@ -13,7 +13,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
 import { usePermissions } from "@/lib/hooks/use-permissions";
-import { formatCurrency } from "@/lib/estimates/calculations";
+import {
+  formatEstimateListStatusLabel,
+  formatEstimateListTotalDisplay,
+} from "@/lib/estimates/pricing-state";
 import type { ProjectOption } from "@/lib/estimates/queries";
 import type { EstimateListItem } from "@/lib/estimates/types";
 import { cn } from "@/lib/utils";
@@ -29,12 +32,11 @@ type EstimatesTableProps = {
   onCreateEstimate?: () => void;
 };
 
-function formatEstimateStatus(status: string) {
-  if (status === "Draft") {
-    return "In progress";
-  }
-
-  return status;
+function formatEstimateStatus(status: string, sellingPrice: number) {
+  return formatEstimateListStatusLabel(
+    status === "Final" ? "Final" : "Draft",
+    sellingPrice
+  );
 }
 
 function formatDate(value: string) {
@@ -142,7 +144,11 @@ export function EstimatesTable({
                 </td>
               </tr>
             ) : (
-              estimates.map((estimate) => (
+              estimates.map((estimate) => {
+                const sellingPrice =
+                  estimate.selling_price || estimate.grand_total || 0;
+
+                return (
                 <tr
                   key={estimate.id}
                   className="cursor-pointer transition-colors hover:bg-muted/20"
@@ -151,7 +157,7 @@ export function EstimatesTable({
                   <td className="px-6 py-4">
                     <p className="font-medium text-primary">{estimate.title}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {formatEstimateStatus(estimate.status)}
+                      {formatEstimateStatus(estimate.status, sellingPrice)}
                     </p>
                   </td>
                   <td className="px-6 py-4">{estimate.project.project_name}</td>
@@ -159,7 +165,7 @@ export function EstimatesTable({
                     {estimate.project.customer.company_name}
                   </td>
                   <td className="px-6 py-4 font-medium tabular-nums">
-                    {formatCurrency(estimate.selling_price || estimate.grand_total)}
+                    {formatEstimateListTotalDisplay(sellingPrice)}
                   </td>
                   <td className="hidden px-6 py-4 text-muted-foreground lg:table-cell">
                     {formatDate(estimate.updated_at)}
@@ -168,7 +174,8 @@ export function EstimatesTable({
                     <EstimateRowActions estimate={estimate} />
                   </td>
                 </tr>
-              ))
+              );
+              })
             )}
           </tbody>
         </table>
