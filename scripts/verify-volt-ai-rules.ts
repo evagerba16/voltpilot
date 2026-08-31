@@ -206,4 +206,51 @@ assert(unknownAnswer.includes("business review"), "unknown vague question should
 const marginAnswer = answerVoltAiFromRules("analyze my margins", mockAnalytics);
 assert(marginAnswer.includes("Margin review") || marginAnswer.includes("margins"), "specific margin question should stay targeted");
 
+const naturalQuestions: Array<{ question: string; mustInclude: string[] }> = [
+  {
+    question: "How much money am I leaving on the table?",
+    mustInclude: ["Money you may be leaving on the table", "What to focus on next:"],
+  },
+  {
+    question: "Which jobs are making me the most money?",
+    mustInclude: ["Jobs making you the most money", "Panel Upgrade"],
+  },
+  {
+    question: "What should I be worried about?",
+    mustInclude: ["What to be worried about right now", "What to focus on next:"],
+  },
+  {
+    question: "Which proposals should I follow up on?",
+    mustInclude: ["Proposals to follow up on", "Commercial TI Bid"],
+  },
+  {
+    question: "Why is my profit down?",
+    mustInclude: ["profit", "What to focus on next:"],
+  },
+  {
+    question: "Who are my best customers?",
+    mustInclude: ["Your best customers", "Apex Electric"],
+  },
+  {
+    question: "What jobs are at risk?",
+    mustInclude: ["Jobs to review", "exceeding the original estimate"],
+  },
+  {
+    question: "How much work do I have coming up?",
+    mustInclude: ["work ahead", "What to focus on next:"],
+  },
+  {
+    question: "Am I pricing my jobs correctly?",
+    mustInclude: ["Are you pricing jobs correctly?", "Assessment"],
+  },
+];
+
+for (const { question, mustInclude } of naturalQuestions) {
+  const answer = answerVoltAiFromRules(question, mockAnalytics);
+  for (const snippet of mustInclude) {
+    assert(answer.includes(snippet), `"${question}" should include "${snippet}"`);
+  }
+  assert(!answer.includes("Try asking"), `"${question}" should not use generic prompt text`);
+}
+
 console.log("volt-ai rules verification passed");

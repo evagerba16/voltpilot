@@ -35,9 +35,13 @@ function normalizeVoltAiQuestion(question: string): string {
 }
 
 function hasSpecificTopicKeyword(normalized: string): boolean {
-  return /margin|profit|pipeline|proposal|estimate|customer|revenue|risk|convert|follow|estimator|labor|material|close rate|win rate|jobs at risk|profitable/.test(
+  return /margin|profit|pipeline|proposal|estimate|customer|revenue|risk|convert|follow|estimator|labor|material|close rate|win rate|jobs at risk|profitable|worried|pricing|leaving|upcoming|table/.test(
     normalized
   );
+}
+
+function matchesPattern(normalized: string, pattern: RegExp): boolean {
+  return pattern.test(normalized);
 }
 
 function matchesYearReview(normalized: string): boolean {
@@ -256,36 +260,61 @@ function getMostProfitableJob(analytics: AnalyticsData) {
   };
 }
 
-function pickPrimaryConcern(analytics: AnalyticsData): string | null {
+function collectBusinessConcerns(analytics: AnalyticsData, limit = 3): string[] {
+  const concerns: string[] = [];
+
   if (analytics.estimating.costOverrunCount > 0) {
-    return `${analytics.estimating.costOverrunCount} active job(s) are running over estimate — review actuals before margin slips further.`;
+    concerns.push(
+      `${analytics.estimating.costOverrunCount} active job(s) are running over estimate — review actuals before margin slips further.`
+    );
   }
 
   if (
     analytics.executive.grossMarginPercent > 0 &&
     analytics.executive.grossMarginPercent < 15
   ) {
-    return `Gross margin is ${formatPercent(analytics.executive.grossMarginPercent)}, below a healthy 15% target.`;
+    concerns.push(
+      `Gross margin is ${formatPercent(analytics.executive.grossMarginPercent)}, below a healthy 15% target.`
+    );
   }
 
   const profitTrend = compareRevenueTrend(analytics.charts.profitTrend);
   if (profitTrend?.direction === "down") {
-    return `Profit is down ${Math.abs(profitTrend.changePercent).toFixed(0)}% compared with earlier in the period.`;
+    concerns.push(
+      `Profit is down ${Math.abs(profitTrend.changePercent).toFixed(0)}% compared with earlier in the period.`
+    );
   }
 
   const revenueTrend = compareRevenueTrend(analytics.charts.revenueTrend);
   if (revenueTrend?.direction === "down") {
-    return `Accepted revenue is down ${Math.abs(revenueTrend.changePercent).toFixed(0)}% compared with earlier in the period.`;
+    concerns.push(
+      `Accepted revenue is down ${Math.abs(revenueTrend.changePercent).toFixed(0)}% compared with earlier in the period.`
+    );
   }
 
   if (analytics.aiOpportunities.lowMarginEstimates.length > 0) {
     const worst = [...analytics.aiOpportunities.lowMarginEstimates].sort(
       (left, right) => left.marginPercent - right.marginPercent
     )[0];
-    return `${analytics.aiOpportunities.lowMarginEstimates.length} open estimate(s) are below target margin${worst ? ` — "${worst.title}" is lowest at ${formatPercent(worst.marginPercent)}` : ""}.`;
+    concerns.push(
+      `${analytics.aiOpportunities.lowMarginEstimates.length} open estimate(s) are below target margin${worst ? ` — "${worst.title}" is lowest at ${formatPercent(worst.marginPercent)}` : ""}.`
+    );
   }
 
-  return null;
+  if (analytics.aiOpportunities.staleProposals.length > 0) {
+    const oldest = [...analytics.aiOpportunities.staleProposals].sort(
+      (left, right) => right.daysSinceSent - left.daysSinceSent
+    )[0];
+    concerns.push(
+      `${analytics.aiOpportunities.staleProposals.length} sent proposal(s) may be stalling${oldest ? ` — "${oldest.title}" has been out ${oldest.daysSinceSent} day(s)` : ""}.`
+    );
+  }
+
+  return concerns.slice(0, limit);
+}
+
+function pickPrimaryConcern(analytics: AnalyticsData): string | null {
+  return collectBusinessConcerns(analytics, 1)[0] ?? null;
 }
 
 function pickPrimaryOpportunity(analytics: AnalyticsData): string | null {
@@ -470,7 +499,7 @@ function answerProfitDownQuestion(analytics: AnalyticsData) {
 
   return formatScannableAnswer("What's pulling profit down", [
     ...reasons.map((reason, index) => `${index + 1}. ${reason}`),
-    "Start with low-margin estimates and jobs with cost overruns.",
+    `What to focus on next: ${pickFocusRecommendation(analytics, reasons[0] ?? null, null)}`,
   ]);
 }
 
@@ -652,6 +681,297 @@ function answerMostProfitableCustomerQuestion(analytics: AnalyticsData) {
   ]);
 }
 
+function answerMoneyLeftOnTableQuestion(analytics: AnalyticsData) {
+  const forecasts = buildForecastViewModel(analytics);
+  const sections: ScannableSection[] = [];
+  const actions: string[] = [];
+
+  if (analytics.executive.pipelineValue > 0) {
+    sections.push({
+      label: "Open pipeline",
+      value: `${formatCurrency(analytics.executive.pipelineValue)} in estimates and proposals not yet awarded`,
+    });
+  }
+
+  if (forecasts.revenue.itemCount > 0) {
+    sections.push({
+      label: "Weighted upside (30 days)",
+      value: `${formatCurrency(forecasts.revenue.expectedRevenue)} expected from ${forecasts.revenue.itemCount} pipeline item(s) at ${formatPercent(forecasts.revenue.historicalWinRate)} win rate`,
+    });
+  }
+
+  if (forecasts.profit.potentialProfitLost > 0) {
+    sections.push({
+      label: "Margin at risk in pipeline",
+      value: `${formatCurrency(forecasts.profit.potentialProfitLost)} if low-margin bids close at current markup`,
+    });
+  }
+
+  if (analytics.aiOpportunities.staleProposals.length > 0) {
+    sections.push({
+      label: "Stale sent proposals",
+      value: `${analytics.aiOpportunities.staleProposals.length} proposal(s) sent with no recent decision`,
+    });
+    const oldest = [...analytics.aiOpportunities.staleProposals].sort(
+      (left, right) => right.daysSinceSent - left.daysSinceSent
+    )[0];
+    actions.push(`Follow up on "${oldest.title}" first — out ${oldest.daysSinceSent} day(s).`);
+  }
+
+  if (analytics.aiOpportunities.lowMarginEstimates.length > 0) {
+    sections.push({
+      label: "Thin bids still open",
+      value: `${analytics.aiOpportunities.lowMarginEstimates.length} estimate(s) below target margin`,
+    });
+    actions.push("Raise markup on the weakest open estimates before they become awarded work.");
+  }
+
+  if (sections.length === 0) {
+    return formatScannableAnswer("Money on the table", [
+      "No open pipeline flagged yet. Build estimates and send proposals to see where revenue is waiting to close.",
+      "What to focus on next: Create estimates on active projects and move qualified bids into sent proposals.",
+    ]);
+  }
+
+  const footer = [
+    actions[0] ? `What to focus on next: ${actions[0]}` : null,
+    actions[1] ?? null,
+  ].filter((line): line is string => Boolean(line));
+
+  if (footer.length === 0) {
+    footer.push(
+      "What to focus on next: Convert qualified pipeline into sent proposals while margins are still healthy."
+    );
+  }
+
+  return formatScannableAnswer("Money you may be leaving on the table", sections, footer);
+}
+
+function answerMostProfitableJobsQuestion(analytics: AnalyticsData) {
+  type JobRow = {
+    name: string;
+    customerName: string;
+    marginPercent: number;
+    profit: number;
+  };
+
+  const rows: JobRow[] = [];
+
+  for (const project of analytics.projects.mostProfitableProjects) {
+    if (project.marginPercent > 0 || project.profit > 0) {
+      rows.push({
+        name: project.projectName,
+        customerName: project.customerName,
+        marginPercent: project.marginPercent,
+        profit: project.profit,
+      });
+    }
+  }
+
+  for (const project of analytics.estimating.marginByProject) {
+    if (project.marginPercent <= 0 && project.revenue <= 0) continue;
+    if (rows.some((row) => row.name === project.projectName)) continue;
+    rows.push({
+      name: project.projectName,
+      customerName: project.customerName,
+      marginPercent: project.marginPercent,
+      profit: project.revenue,
+    });
+  }
+
+  const ranked = rows
+    .sort((left, right) => right.profit - left.profit || right.marginPercent - left.marginPercent)
+    .slice(0, 5);
+
+  if (ranked.length === 0) {
+    return formatScannableAnswer("Most profitable jobs", [
+      "No job profitability data yet. Finalize estimates and track job costing on awarded work to rank your best jobs.",
+      "What to focus on next: Close and cost-track a few jobs so margin by project becomes visible.",
+    ]);
+  }
+
+  return formatScannableAnswer("Jobs making you the most money", [
+    {
+      label: "Top job",
+      value: `${ranked[0].name} (${ranked[0].customerName}) — ${formatCurrency(ranked[0].profit)} at ${formatPercent(ranked[0].marginPercent)} margin`,
+    },
+    ...ranked.map(
+      (job, index) =>
+        `${index + 1}. ${job.name} (${job.customerName}) — ${formatCurrency(job.profit)}, ${formatPercent(job.marginPercent)} margin`
+    ),
+    "Look for repeat work with these customers and similar scope types.",
+  ]);
+}
+
+function answerWorriedAboutQuestion(analytics: AnalyticsData) {
+  const concerns = collectBusinessConcerns(analytics, 3);
+
+  if (concerns.length === 0) {
+    return formatScannableAnswer("What to watch", [
+      "Nothing urgent flagged in your current numbers.",
+      "Keep an eye on margin on new bids and follow up on sent proposals within a week.",
+      `What to focus on next: ${pickFocusRecommendation(analytics, null, null)}`,
+    ]);
+  }
+
+  return formatScannableAnswer("What to be worried about right now", [
+    ...concerns.map((concern, index) => `${index + 1}. ${concern}`),
+    `What to focus on next: ${pickFocusRecommendation(analytics, concerns[0] ?? null, null)}`,
+  ]);
+}
+
+function answerProposalsToFollowUpQuestion(analytics: AnalyticsData) {
+  const staleProposals = [...analytics.aiOpportunities.staleProposals].sort(
+    (left, right) => right.daysSinceSent - left.daysSinceSent
+  );
+
+  if (staleProposals.length === 0) {
+    return formatScannableAnswer("Proposal follow-ups", [
+      "No sent proposals are flagged as stale right now.",
+      "Check open Sent/Viewed proposals in Proposals and confirm scope if a customer goes quiet.",
+    ]);
+  }
+
+  return formatScannableAnswer("Proposals to follow up on", [
+    {
+      label: "Count",
+      value: `${staleProposals.length} sent proposal(s) may need a nudge`,
+    },
+    ...staleProposals.slice(0, 5).map(
+      (proposal, index) =>
+        `${index + 1}. "${proposal.title}" — ${proposal.customerName}, sent ${proposal.daysSinceSent} day(s) ago`
+    ),
+    `What to focus on next: Call or email on "${staleProposals[0].title}" today while scope is still fresh.`,
+  ]);
+}
+
+function answerBestCustomersQuestion(analytics: AnalyticsData) {
+  const customers = [...analytics.customers.topCustomers]
+    .filter((customer) => customer.revenue > 0)
+    .sort((left, right) => right.revenue - left.revenue)
+    .slice(0, 5);
+
+  if (customers.length === 0) {
+    return formatScannableAnswer("Best customers", [
+      "No customer revenue history yet. Accepted proposals will show who drives the most work.",
+      "What to focus on next: Close awarded work and keep customer records tied to every project.",
+    ]);
+  }
+
+  return formatScannableAnswer("Your best customers", [
+    {
+      label: "Top customer",
+      value: `${customers[0].companyName} — ${formatCurrency(customers[0].revenue)} across ${customers[0].projectCount} project(s)`,
+    },
+    ...customers.map(
+      (customer, index) =>
+        `${index + 1}. ${customer.companyName} — ${formatCurrency(customer.revenue)}, ${customer.projectCount} project(s)`
+    ),
+    "Protect these relationships — repeat work from top customers is usually your highest-margin pipeline.",
+  ]);
+}
+
+function answerUpcomingWorkQuestion(analytics: AnalyticsData) {
+  const forecasts = buildForecastViewModel(analytics);
+  const stages = analytics.charts.projectPipeline.filter(
+    (stage) => !["Lost", "Archived"].includes(stage.status) && stage.count > 0
+  );
+  const stageSummary =
+    stages.map((stage) => `${stage.status}: ${stage.count}`).join(", ") || NO_DATA_YET;
+
+  return formatScannableAnswer(`${periodLabel(analytics.filters.dateRange)} work ahead`, [
+    {
+      label: "Pipeline value",
+      value:
+        analytics.executive.pipelineValue > 0
+          ? formatCurrency(analytics.executive.pipelineValue)
+          : NO_DATA_YET,
+    },
+    {
+      label: "Expected revenue (30 days)",
+      value:
+        forecasts.revenue.itemCount > 0
+          ? `${formatCurrency(forecasts.revenue.expectedRevenue)} from ${forecasts.revenue.itemCount} weighted item(s)`
+          : NO_DATA_YET,
+    },
+    {
+      label: "Active jobs",
+      value:
+        analytics.executive.activeProjects > 0
+          ? `${analytics.executive.activeProjects} active project(s)`
+          : NO_DATA_YET,
+    },
+    { label: "Pipeline stages", value: stageSummary },
+    forecasts.revenue.bestCaseRevenue > forecasts.revenue.expectedRevenue
+      ? {
+          label: "Upside if bids land",
+          value: `${formatCurrency(forecasts.revenue.bestCaseRevenue)} best-case in the next 30 days`,
+        }
+      : "",
+    `What to focus on next: ${pickFocusRecommendation(analytics, pickPrimaryConcern(analytics), pickPrimaryOpportunity(analytics))}`,
+  ].filter(Boolean) as ScannableSection[]);
+}
+
+function answerPricingCorrectlyQuestion(analytics: AnalyticsData) {
+  const target = analytics.aiOpportunities.targetMarginPercent;
+  const portfolio = analytics.executive.grossMarginPercent;
+  const lowMarginCount = analytics.aiOpportunities.lowMarginEstimates.length;
+  const accuracy = analytics.estimating.estimateAccuracyPercent;
+  const sections: ScannableSection[] = [];
+  const notes: string[] = [];
+
+  if (portfolio > 0) {
+    sections.push({
+      label: "Portfolio gross margin",
+      value: `${formatPercent(portfolio)} vs ${formatPercent(target)} target`,
+    });
+  } else {
+    sections.push({ label: "Portfolio gross margin", value: NO_DATA_YET });
+  }
+
+  if (accuracy > 0) {
+    sections.push({
+      label: "Estimate accuracy",
+      value: `${formatPercent(accuracy)} (estimated vs actual on tracked jobs)`,
+    });
+  }
+
+  if (lowMarginCount > 0) {
+    const worst = [...analytics.aiOpportunities.lowMarginEstimates].sort(
+      (left, right) => left.marginPercent - right.marginPercent
+    )[0];
+    sections.push({
+      label: "Open bids below target",
+      value: `${lowMarginCount} estimate(s)${worst ? ` — lowest is "${worst.title}" at ${formatPercent(worst.marginPercent)}` : ""}`,
+    });
+    notes.push("Review markup on thin open estimates before sending proposals.");
+  }
+
+  if (analytics.estimating.costOverrunCount > 0) {
+    sections.push({
+      label: "Jobs over estimate",
+      value: `${analytics.estimating.costOverrunCount} active job(s) — actuals are beating the bid`,
+    });
+    notes.push("Compare labor and material assumptions on overrun jobs before repricing similar work.");
+  }
+
+  let verdict = "Need more awarded and cost-tracked jobs to judge pricing confidence.";
+  if (portfolio >= target && lowMarginCount === 0 && analytics.estimating.costOverrunCount === 0) {
+    verdict = "Pricing looks healthy — margins are at or above target with no major overruns flagged.";
+  } else if (portfolio > 0 && portfolio < target) {
+    verdict = "Pricing is likely too tight overall — portfolio margin is below your target.";
+  } else if (lowMarginCount > 0 || analytics.estimating.costOverrunCount > 0) {
+    verdict = "Pricing needs attention on specific bids or active jobs, even if the portfolio average looks okay.";
+  }
+
+  return formatScannableAnswer("Are you pricing jobs correctly?", [
+    { label: "Assessment", value: verdict },
+    ...sections,
+    notes[0] ? `Why it matters: ${notes[0]}` : "",
+    `What to focus on next: ${notes[0] ?? pickFocusRecommendation(analytics, pickPrimaryConcern(analytics), null)}`,
+  ].filter(Boolean) as ScannableSection[]);
+}
+
 function answerRevenuePredictionQuestion(analytics: AnalyticsData) {
   const forecasts = buildForecastViewModel(analytics);
   const trend = forecasts.revenueTrend;
@@ -680,6 +1000,68 @@ export function answerVoltAiFromRules(question: string, analytics: AnalyticsData
 
   if (intent.intent === "year_review") {
     return answerYearToDateReview(analytics);
+  }
+
+  if (
+    matchesPattern(normalized, /leaving on the table|money.*table|leaving.*table|left on the table/)
+  ) {
+    return answerMoneyLeftOnTableQuestion(analytics);
+  }
+
+  if (
+    matchesPattern(
+      normalized,
+      /(most money|making me the most|most profitable|best money|highest profit).*(job|project|work)|which jobs.*(money|profit|profitable)/
+    ) &&
+    !normalized.includes("estimate")
+  ) {
+    return answerMostProfitableJobsQuestion(analytics);
+  }
+
+  if (
+    matchesPattern(
+      normalized,
+      /worried|worry about|should i worry|be concerned|what.*(wrong|bad|off)/
+    )
+  ) {
+    return answerWorriedAboutQuestion(analytics);
+  }
+
+  if (
+    matchesPattern(
+      normalized,
+      /(proposal|proposals).*(follow|follow up|follow-up|followup|nudge|chase)|follow.*(proposal|proposals)/
+    )
+  ) {
+    return answerProposalsToFollowUpQuestion(analytics);
+  }
+
+  if (
+    matchesPattern(
+      normalized,
+      /best customer|top customer|who are my (best|top)|best clients|top clients/
+    ) &&
+    !normalized.includes("profitable")
+  ) {
+    return answerBestCustomersQuestion(analytics);
+  }
+
+  if (
+    matchesPattern(
+      normalized,
+      /coming up|upcoming|work ahead|work do i have|how much work|pipeline ahead|booked work|backlog/
+    )
+  ) {
+    return answerUpcomingWorkQuestion(analytics);
+  }
+
+  if (
+    matchesPattern(
+      normalized,
+      /pricing.*(correct|right|properly|too low|too high|jobs)|price.*(correct|right|properly|jobs)|am i pricing|priced correctly|charge enough/
+    )
+  ) {
+    return answerPricingCorrectlyQuestion(analytics);
   }
 
   if (normalized.includes("analyze") && normalized.includes("margin")) {
