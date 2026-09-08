@@ -247,3 +247,44 @@ export function reviewProposal(state: ProposalEditorState): ProposalReviewResult
 export function formatProposalStarRating(stars: number) {
   return "⭐".repeat(stars);
 }
+
+/** Suggestions that must be resolved before readyToSend can become true. */
+export function getProposalSendBlockers(
+  result: Pick<ProposalReviewResult, "readyToSend" | "suggestions">
+): ProposalReviewSuggestion[] {
+  if (result.readyToSend) {
+    return [];
+  }
+
+  return result.suggestions;
+}
+
+function normalizeBlockerMessage(message: string) {
+  return message.replace(/\.$/, "").toLowerCase();
+}
+
+/** Toolbar / banner copy explaining why Send is unavailable. */
+export function formatProposalSendBlockerContext(
+  blockers: ProposalReviewSuggestion[],
+  maxItems = 3
+): string {
+  if (blockers.length === 0) {
+    return "Complete the required proposal sections before sending.";
+  }
+
+  const shown = blockers.slice(0, maxItems).map((blocker) =>
+    normalizeBlockerMessage(blocker.message)
+  );
+  const remaining = blockers.length - shown.length;
+
+  if (shown.length === 1 && remaining === 0) {
+    return `${shown[0]} — send is unavailable until this is fixed.`;
+  }
+
+  if (remaining === 0) {
+    const last = shown.pop()!;
+    return `${shown.join(", ")}, and ${last} — send is unavailable until these are fixed.`;
+  }
+
+  return `${shown.join(", ")}, and ${remaining} more — send is unavailable until these are fixed.`;
+}

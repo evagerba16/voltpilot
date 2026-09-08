@@ -43,7 +43,10 @@ import { useToast } from "@/components/ui/toast-provider";
 import { mapProposalToEditorState } from "@/lib/proposals/build-from-estimate";
 import { formatCurrency } from "@/lib/proposals/format";
 import { resolveProposalPrimaryAction } from "@/lib/proposals/primary-action";
-import { reviewProposal } from "@/lib/ai/proposal-review";
+import {
+  getProposalSendBlockers,
+  reviewProposal,
+} from "@/lib/ai/proposal-review";
 import type { ProposalInsightWithAction, ProposalProfile } from "@/lib/proposals/profile-types";
 import {
   isProposalLocked,
@@ -129,6 +132,10 @@ export function ProposalEditor({
   const estimateSnapshot = proposal.estimate_snapshot as ProposalEstimateSnapshot | null;
 
   const reviewResult = useMemo(() => reviewProposal(state), [state]);
+  const sendBlockers = useMemo(
+    () => getProposalSendBlockers(reviewResult),
+    [reviewResult]
+  );
 
   const primaryAction = useMemo(
     () =>
@@ -136,8 +143,9 @@ export function ProposalEditor({
         status: proposal.status,
         canEdit,
         readyToSend: reviewResult.readyToSend,
+        sendBlockers,
       }),
-    [proposal.status, canEdit, reviewResult.readyToSend]
+    [proposal.status, canEdit, reviewResult.readyToSend, sendBlockers]
   );
 
   const grossMarginLabel =
@@ -168,6 +176,11 @@ export function ProposalEditor({
     ]
   );
 
+  function scrollToReadinessReview() {
+    const element = document.getElementById("proposal-send-readiness");
+    element?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function handlePrimaryAction() {
     switch (primaryAction.kind) {
       case "send":
@@ -177,6 +190,16 @@ export function ProposalEditor({
       case "manage_job":
         router.push(`/projects/${proposal.project.id}?tab=job-costing`);
         break;
+      case "complete_to_send": {
+        scrollToReadinessReview();
+        const firstBlocker = sendBlockers.find((blocker) => blocker.field);
+        if (firstBlocker?.field) {
+          focusProposalField(firstBlocker.field);
+        } else {
+          setMode("edit");
+        }
+        break;
+      }
       case "preview":
         setMode("preview");
         break;
@@ -367,6 +390,30 @@ export function ProposalEditor({
       return;
     }
 
+    if (insight.id === "missing-terms") {
+      focusProposalField("terms_and_conditions");
+      return;
+    }
+
+    if (insight.id === "missing-warranty") {
+      focusProposalField("warranty_information");
+      return;
+    }
+
+    if (insight.id.startsWith("review-")) {
+      const suggestionId = insight.id.replace("review-", "");
+      const suggestion = reviewResult.suggestions.find((item) => item.id === suggestionId);
+      if (suggestion?.field) {
+        focusProposalField(suggestion.field);
+        return;
+      }
+    }
+
+    if (insight.id === "readiness" || insight.id === "strong-readiness") {
+      scrollToReadinessReview();
+      return;
+    }
+
     setMode("edit");
   }
 
@@ -402,6 +449,40 @@ export function ProposalEditor({
             proposal.amount > 0 ? formatCurrency(proposal.amount) : "Not priced yet"
           }
           grossMarginPercent={grossMarginLabel}
+          readinessScore={canEdit ? reviewResult.score : null}
+        />
+      ) : null}
+
+      {canEdit && !reviewResult.readyToSend && !isAccepted ? (
+        <AlertBanner
+          variant="info"
+          title="Send unavailable — complete required sections first"
+        >
+          <ul className="mt-2 space-y-1">
+            {sendBlockers.slice(0, 4).map((blocker) => (
+              <li key={blocker.id}>
+                {blocker.field ? (
+                  <button
+                    type="button"
+                    onClick={() => focusProposalField(blocker.field!)}
+                    className="text-left underline-offset-2 hover:underline"
+                  >
+                    {blocker.message}
+                  </button>
+                ) : (
+                  blocker.message
+                )}
+              </li>
+            ))}
+          </ul>
+        </AlertBanner>
+      ) : null}
+
+      {canEdit && !reviewResult.readyToSend && !isAccepted ? (
+        <AiProposalReviewCard
+          id="proposal-send-readiness"
+          state={state}
+          onFocusField={focusProposalField}
         />
       ) : null}
 
@@ -696,16 +777,6 @@ export function ProposalEditor({
         </div>
       </details>
 
-      {canEdit && insights.length === 0 ? (
-        <details className="group rounded-2xl border border-border bg-card shadow-sm">
-          <summary className="cursor-pointer list-none px-6 py-4 text-sm font-semibold marker:content-none [&::-webkit-details-marker]:hidden">
-            Readiness review
-          </summary>
-          <div className="border-t border-border px-6 py-6">
-            <AiProposalReviewCard state={state} onFocusField={focusProposalField} />
-          </div>
-        </details>
-      ) : null}
 
       <ProposalBuilderOverflowMenu
         open={overflowOpen}

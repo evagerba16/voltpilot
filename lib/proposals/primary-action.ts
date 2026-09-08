@@ -1,12 +1,17 @@
 import type { LucideIcon } from "lucide-react";
-import { Eye, HardHat, RefreshCw, Send } from "lucide-react";
+import { ClipboardList, Eye, HardHat, RefreshCw, Send } from "lucide-react";
 
+import {
+  formatProposalSendBlockerContext,
+  type ProposalReviewSuggestion,
+} from "@/lib/ai/proposal-review";
 import type { ProposalStatus } from "@/lib/proposals/types";
 
 export type ProposalPrimaryActionKind =
   | "send"
   | "follow_up"
   | "manage_job"
+  | "complete_to_send"
   | "preview"
   | "workflow";
 
@@ -21,6 +26,7 @@ type ResolveProposalPrimaryActionInput = {
   status: ProposalStatus;
   canEdit: boolean;
   readyToSend: boolean;
+  sendBlockers?: ProposalReviewSuggestion[];
 };
 
 /** Context-aware primary CTA for the proposal workspace. */
@@ -60,6 +66,15 @@ export function resolveProposalPrimaryAction(
       kind: "send",
       icon: Send,
       context: "Proposal looks ready — send a professional bid.",
+    };
+  }
+
+  if (input.canEdit && input.sendBlockers && input.sendBlockers.length > 0) {
+    return {
+      label: "Complete to send",
+      kind: "complete_to_send",
+      icon: ClipboardList,
+      context: formatProposalSendBlockerContext(input.sendBlockers),
     };
   }
 

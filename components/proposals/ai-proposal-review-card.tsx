@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 
 import {
   formatProposalStarRating,
+  getProposalSendBlockers,
   reviewProposal,
   type ProposalReviewResult,
 } from "@/lib/ai/proposal-review";
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
 type AiProposalReviewCardProps = {
   state: ProposalEditorState;
   onFocusField?: (field: keyof ProposalEditorState) => void;
+  id?: string;
 };
 
 function scoreStyles(score: number) {
@@ -41,20 +43,27 @@ function suggestionPrefix(kind: ProposalReviewResult["suggestions"][number]["kin
 export function AiProposalReviewCard({
   state,
   onFocusField,
+  id,
 }: AiProposalReviewCardProps) {
   const result = reviewProposal(state);
+  const blockers = getProposalSendBlockers(result);
 
   return (
-    <section className="rounded-xl border border-border bg-card shadow-sm">
+    <section
+      id={id}
+      className="rounded-xl border border-border bg-card shadow-sm"
+    >
       <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Sparkles className="size-4" />
           </div>
           <div>
-            <h2 className="text-base font-semibold">AI Proposal Review</h2>
+            <h2 className="text-base font-semibold">Send readiness</h2>
             <p className="text-sm text-muted-foreground">
-              Pre-send readiness check before this goes to the customer
+              {result.readyToSend
+                ? "All required sections are complete — you can send this proposal."
+                : "Complete the items below before sending to your customer."}
             </p>
           </div>
         </div>
@@ -69,19 +78,29 @@ export function AiProposalReviewCard({
           <p className="text-sm" aria-label={`${result.starRating} out of 5 stars`}>
             {formatProposalStarRating(result.starRating)}
           </p>
+          <p
+            className={cn(
+              "mt-1 text-xs font-medium",
+              result.readyToSend
+                ? "text-emerald-700 dark:text-emerald-400"
+                : "text-amber-700 dark:text-amber-400"
+            )}
+          >
+            {result.readyToSend ? "Ready to send" : "Send unavailable"}
+          </p>
         </div>
       </div>
 
       <div className="px-5 py-4">
         <p className="text-sm text-muted-foreground">{result.summary}</p>
 
-        {result.suggestions.length > 0 ? (
+        {blockers.length > 0 ? (
           <div className="mt-4 space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Suggestions
+              Required before send
             </p>
             <ul className="space-y-2">
-              {result.suggestions.map((suggestion) => (
+              {blockers.map((suggestion) => (
                 <li key={suggestion.id}>
                   {suggestion.field && onFocusField ? (
                     <button
