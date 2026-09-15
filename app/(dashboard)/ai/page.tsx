@@ -111,7 +111,7 @@ export default async function AiPage({ searchParams }: AiPageProps) {
         ) : advisor ? (
           <div className="space-y-8">
             {dailyBriefing ? (
-              <DailyAiBriefing briefing={dailyBriefing} displayName={context.displayName} />
+              <DailyAiBriefing briefing={dailyBriefing} />
             ) : null}
             <VoltAiAdvisorDashboard
               data={advisor}

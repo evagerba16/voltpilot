@@ -3,15 +3,13 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles, Sun } from "lucide-react";
 
-import { DashboardGreeting } from "@/components/dashboard/dashboard-greeting";
 import type { DailyBriefing } from "@/lib/ai/daily-briefing";
 
 type DailyAiBriefingProps = {
   briefing: DailyBriefing;
-  displayName: string;
 };
 
-export function DailyAiBriefing({ briefing, displayName }: DailyAiBriefingProps) {
+export function DailyAiBriefing({ briefing }: DailyAiBriefingProps) {
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <div className="border-b border-border bg-gradient-to-r from-violet-500/10 via-primary/5 to-transparent px-6 py-4">
@@ -24,9 +22,6 @@ export function DailyAiBriefing({ briefing, displayName }: DailyAiBriefingProps)
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Daily AI Briefing
               </p>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight">
-                <DashboardGreeting displayName={displayName} />
-              </h2>
               <p className="mt-1 text-sm text-muted-foreground">{briefing.headline}</p>
             </div>
           </div>
