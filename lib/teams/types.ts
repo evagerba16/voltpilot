@@ -4,6 +4,7 @@ export const TEAM_ROLES = [
   "estimator",
   "project_manager",
   "viewer",
+  "electrician",
 ] as const;
 
 export type TeamRole = (typeof TEAM_ROLES)[number];
@@ -13,6 +14,7 @@ export const INVITABLE_ROLES = [
   "estimator",
   "project_manager",
   "viewer",
+  "electrician",
 ] as const;
 
 export type InvitableRole = (typeof INVITABLE_ROLES)[number];
@@ -65,6 +67,7 @@ export const TEAM_ROLE_LABELS: Record<TeamRole, string> = {
   estimator: "Estimator",
   project_manager: "Project Manager",
   viewer: "Viewer",
+  electrician: "Electrician",
 };
 
 export const TEAM_ROLE_DESCRIPTIONS: Record<TeamRole, string> = {
@@ -73,6 +76,7 @@ export const TEAM_ROLE_DESCRIPTIONS: Record<TeamRole, string> = {
   estimator: "Create and edit estimates and projects",
   project_manager: "Manage projects, customers, estimates, and proposals",
   viewer: "Read-only access to projects and estimates",
+  electrician: "View and update assigned projects and job progress",
 };
 
 export type TeamPermission =

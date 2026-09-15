@@ -69,6 +69,14 @@ const ROLE_PERMISSIONS: Record<TeamRole, TeamPermission[]> = {
     "proposals.view",
     "analytics.view",
   ],
+  electrician: [
+    "dashboard.view",
+    "customers.view",
+    "projects.view",
+    "projects.edit",
+    "estimates.view",
+    "proposals.view",
+  ],
 };
 
 export function getPermissionsForRole(role: TeamRole): TeamPermission[] {

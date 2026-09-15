@@ -265,13 +265,11 @@ export function TeamManagement({
                     disabled={pending || currentRole !== "owner" && member.role === "admin"}
                     className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
                   >
-                    {(["admin", "estimator", "project_manager", "viewer"] as const).map(
-                      (role) => (
-                        <option key={role} value={role}>
-                          {TEAM_ROLE_LABELS[role]}
-                        </option>
-                      )
-                    )}
+                    {INVITABLE_ROLES.map((role) => (
+                      <option key={role} value={role}>
+                        {TEAM_ROLE_LABELS[role]}
+                      </option>
+                    ))}
                   </select>
                 ) : (
                   <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
