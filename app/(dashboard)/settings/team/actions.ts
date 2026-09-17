@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 
 import { assertPermission, requireTeamContext } from "@/lib/auth/get-team-context";
+import {
+  getOrganizationEntitlements,
+  getOrganizationSeatUsage,
+  isB2BOrganizationPlan,
+  type OrganizationSeatUsage,
+} from "@/lib/billing/entitlements";
 import { getUser } from "@/lib/auth/get-user";
 import { sendInvitationEmail } from "@/lib/email/send-invitation";
 import { assertValidEmail } from "@/lib/security/url-validation";
@@ -51,6 +57,14 @@ export async function inviteTeamMember(formData: FormData) {
 
   if (existingMember?.status === "active") {
     return { error: "This person is already an active team member." };
+  }
+
+  const seatUsage = await getOrganizationSeatUsage(context.organizationId);
+
+  if (!seatUsage.canAddSeat) {
+    return {
+      error: `Your company has reached its seat limit (${seatUsage.seatLimit}). Deactivate a member or revoke a pending invite to free a seat.`,
+    };
   }
 
   const { data: invitation, error } = await supabase
@@ -211,6 +225,14 @@ export async function reactivateTeamMember(memberId: string) {
     return { error: "You cannot reactivate this team member." };
   }
 
+  const seatUsage = await getOrganizationSeatUsage(context.organizationId);
+
+  if (!seatUsage.canAddSeat) {
+    return {
+      error: `Your company has reached its seat limit (${seatUsage.seatLimit}). Free a seat before reactivating this member.`,
+    };
+  }
+
   const { error } = await supabase
     .from("team_members")
     .update({
@@ -299,6 +321,13 @@ export async function acceptTeamInvitation(token: string) {
       };
     }
 
+    if (rpcError.includes("seat limit")) {
+      return {
+        error:
+          "This company has reached its seat limit. Ask your admin to free a seat or upgrade your plan.",
+      };
+    }
+
     return { error: "We couldn't accept this invitation. Try again in a moment." };
   }
 
@@ -327,9 +356,24 @@ export async function getTeamPageData() {
     };
   }
 
+  const canManage = context.permissions.includes("settings.team.manage");
+  let b2bSeatUsage: OrganizationSeatUsage | null = null;
+
+  if (canManage) {
+    const entitlements = await getOrganizationEntitlements(context.organizationId);
+
+    if (
+      isB2BOrganizationPlan(entitlements.planType) &&
+      entitlements.seatLimit !== null
+    ) {
+      b2bSeatUsage = await getOrganizationSeatUsage(context.organizationId);
+    }
+  }
+
   return {
     overview,
     context,
-    canManage: context.permissions.includes("settings.team.manage"),
+    canManage,
+    b2bSeatUsage,
   };
 }

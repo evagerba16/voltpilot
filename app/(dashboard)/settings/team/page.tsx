@@ -5,6 +5,7 @@ import { SettingsNav } from "@/components/settings/settings-nav";
 import { TeamManagement } from "@/components/settings/team-management";
 import { getTeamPageData } from "@/app/(dashboard)/settings/team/actions";
 import { getTeamContext } from "@/lib/auth/get-team-context";
+import { shouldShowBillingInSettings } from "@/lib/billing/entitlements";
 import { hasPermission } from "@/lib/teams/permissions";
 
 export default async function TeamSettingsPage() {
@@ -18,7 +19,10 @@ export default async function TeamSettingsPage() {
     redirect("/settings");
   }
 
-  const result = await getTeamPageData();
+  const [result, showBilling] = await Promise.all([
+    getTeamPageData(),
+    shouldShowBillingInSettings(context.organizationId, context.permissions),
+  ]);
 
   if ("error" in result && result.error) {
     return (
@@ -28,7 +32,7 @@ export default async function TeamSettingsPage() {
           <div className="mx-auto max-w-5xl space-y-6">
             <SettingsNav
               showTeam={hasPermission(context.permissions, "settings.team.view")}
-              showBilling={hasPermission(context.permissions, "settings.billing.view")}
+              showBilling={showBilling}
             />
             <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-6 py-5 text-sm text-destructive">
               {result.error}
@@ -51,12 +55,13 @@ export default async function TeamSettingsPage() {
           </div>
           <SettingsNav
             showTeam={hasPermission(context.permissions, "settings.team.view")}
-            showBilling={hasPermission(context.permissions, "settings.billing.view")}
+            showBilling={showBilling}
           />
           <TeamManagement
             overview={result.overview!}
             canManage={result.canManage!}
             currentRole={result.context!.role}
+            b2bSeatUsage={result.b2bSeatUsage ?? null}
           />
         </div>
       </main>

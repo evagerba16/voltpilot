@@ -8,6 +8,7 @@ import {
   RotateCcw,
   UserMinus,
   UserPlus,
+  Users,
 } from "lucide-react";
 
 import {
@@ -26,12 +27,16 @@ import {
   type TeamOverview,
   type TeamRole,
 } from "@/lib/teams/types";
+import { ContactSupportLink } from "@/components/site/contact-support-link";
+import type { OrganizationSeatUsage } from "@/lib/billing/entitlements";
+import { formatSeatUsage } from "@/lib/billing/seat-display";
 import { cn } from "@/lib/utils";
 
 type TeamManagementProps = {
   overview: TeamOverview;
   canManage: boolean;
   currentRole: TeamRole;
+  b2bSeatUsage?: OrganizationSeatUsage | null;
 };
 
 function formatDate(value: string | null) {
@@ -48,6 +53,7 @@ export function TeamManagement({
   overview,
   canManage,
   currentRole,
+  b2bSeatUsage = null,
 }: TeamManagementProps) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -59,6 +65,7 @@ export function TeamManagement({
   const deactivatedMembers = overview.members.filter(
     (member) => member.status === "deactivated"
   );
+  const inviteBlockedBySeats = Boolean(b2bSeatUsage && !b2bSeatUsage.canAddSeat);
 
   function handleInvite(formData: FormData) {
     setError(null);
@@ -149,12 +156,68 @@ export function TeamManagement({
         </p>
       </div>
 
+      {b2bSeatUsage ? (
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <Users className="size-4 text-primary" />
+            <h2 className="text-base font-semibold">Team usage</h2>
+          </div>
+          <p className="text-sm font-medium">{formatSeatUsage(b2bSeatUsage)}</p>
+          <dl className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                Active members
+              </dt>
+              <dd className="mt-1 text-sm font-medium">{b2bSeatUsage.activeMembers}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                Pending invitations
+              </dt>
+              <dd className="mt-1 text-sm font-medium">{b2bSeatUsage.pendingInvites}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                Available seats
+              </dt>
+              <dd className="mt-1 text-sm font-medium">{b2bSeatUsage.seatsRemaining ?? "—"}</dd>
+            </div>
+          </dl>
+          {inviteBlockedBySeats ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Need more seats? Contact VoltPilot to increase your team capacity.{" "}
+              <ContactSupportLink subject="Increase team seats">
+                Contact VoltPilot
+              </ContactSupportLink>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {canManage ? (
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
             <UserPlus className="size-4 text-primary" />
             <h2 className="text-base font-semibold">Invite team member</h2>
           </div>
+
+          {b2bSeatUsage ? (
+            <p className="mb-4 text-sm text-muted-foreground">
+              {inviteBlockedBySeats ? (
+                <>
+                  All {b2bSeatUsage.seatLimit} seats are in use ({b2bSeatUsage.seatsUsed}{" "}
+                  assigned). Deactivate a member or revoke a pending invite to free a seat before
+                  inviting someone new.
+                </>
+              ) : (
+                <>
+                  {b2bSeatUsage.seatsRemaining === 1
+                    ? "1 seat available for a new invite."
+                    : `${b2bSeatUsage.seatsRemaining} seats available for new invites.`}
+                </>
+              )}
+            </p>
+          ) : null}
 
           <form action={handleInvite} className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_auto]">
             <div className="space-y-2">
@@ -167,7 +230,8 @@ export function TeamManagement({
                 type="email"
                 required
                 placeholder="estimator@company.com"
-                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                disabled={inviteBlockedBySeats || pending}
+                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
 
@@ -179,7 +243,8 @@ export function TeamManagement({
                 id="invite-role"
                 name="role"
                 defaultValue="estimator"
-                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                disabled={inviteBlockedBySeats || pending}
+                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {INVITABLE_ROLES.map((role) => (
                   <option key={role} value={role}>
@@ -190,7 +255,7 @@ export function TeamManagement({
             </div>
 
             <div className="flex items-end">
-              <Button type="submit" disabled={pending}>
+              <Button type="submit" disabled={pending || inviteBlockedBySeats}>
                 <Mail data-icon="inline-start" />
                 {pending ? "Sending..." : "Send invite"}
               </Button>
@@ -360,7 +425,12 @@ export function TeamManagement({
                     variant="outline"
                     size="sm"
                     onClick={() => handleReactivate(member.id)}
-                    disabled={pending}
+                    disabled={pending || inviteBlockedBySeats}
+                    title={
+                      inviteBlockedBySeats
+                        ? "Free a seat before reactivating this member."
+                        : undefined
+                    }
                   >
                     <RotateCcw data-icon="inline-start" />
                     Reactivate
