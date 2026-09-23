@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import {
   Ban,
+  Check,
   Copy,
   Mail,
   RotateCcw,
@@ -13,7 +14,7 @@ import {
 
 import {
   deactivateTeamMember,
-  inviteTeamMember,
+  inviteTeamMemberFormAction,
   reactivateTeamMember,
   revokeTeamInvitation,
   updateTeamMemberRole,
@@ -30,7 +31,26 @@ import {
 import { ContactSupportLink } from "@/components/site/contact-support-link";
 import type { OrganizationSeatUsage } from "@/lib/billing/entitlements";
 import { formatSeatUsage } from "@/lib/billing/seat-display";
+import { buildInviteUrlForCurrentOrigin } from "@/lib/teams/invite-url";
+import { copyToClipboard } from "@/lib/utils/copy-to-clipboard";
 import { cn } from "@/lib/utils";
+
+function resolveInviteCopyUrl(inviteUrl: string | null | undefined, token?: string) {
+  if (token) {
+    return buildInviteUrlForCurrentOrigin(token);
+  }
+
+  if (!inviteUrl) {
+    return null;
+  }
+
+  const match = inviteUrl.match(/\/invite\/([^/?#]+)/);
+  if (match?.[1]) {
+    return buildInviteUrlForCurrentOrigin(match[1]);
+  }
+
+  return inviteUrl;
+}
 
 type TeamManagementProps = {
   overview: TeamOverview;
@@ -57,33 +77,48 @@ export function TeamManagement({
 }: TeamManagementProps) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [copiedLinkKey, setCopiedLinkKey] = useState<string | null>(null);
+  const [inviteState, inviteAction, isInviting] = useActionState(
+    inviteTeamMemberFormAction,
+    null
+  );
   const [pending, startTransition] = useTransition();
   const confirm = useConfirm();
+
+  const latestInviteUrl =
+    inviteState && "success" in inviteState ? inviteState.inviteUrl ?? null : null;
+
+  useEffect(() => {
+    if (!inviteState) {
+      return;
+    }
+
+    if ("error" in inviteState && inviteState.error) {
+      setError(inviteState.error);
+      setMessage(null);
+      return;
+    }
+
+    if ("success" in inviteState) {
+      setError(null);
+      setMessage(inviteState.message ?? "Invitation created.");
+    }
+  }, [inviteState]);
+
+  useEffect(() => {
+    if (!copiedLinkKey) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setCopiedLinkKey(null), 2000);
+    return () => window.clearTimeout(timeout);
+  }, [copiedLinkKey]);
 
   const activeMembers = overview.members.filter((member) => member.status === "active");
   const deactivatedMembers = overview.members.filter(
     (member) => member.status === "deactivated"
   );
   const inviteBlockedBySeats = Boolean(b2bSeatUsage && !b2bSeatUsage.canAddSeat);
-
-  function handleInvite(formData: FormData) {
-    setError(null);
-    setMessage(null);
-    setInviteUrl(null);
-
-    startTransition(async () => {
-      const result = await inviteTeamMember(formData);
-
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-
-      setMessage(result.message ?? "Invitation created.");
-      setInviteUrl(result.inviteUrl ?? null);
-    });
-  }
 
   function handleRoleChange(memberId: string, role: TeamRole) {
     setError(null);
@@ -135,12 +170,15 @@ export function TeamManagement({
     });
   }
 
-  async function copyInviteUrl() {
-    if (!inviteUrl) return;
+  async function handleCopyInviteLink(url: string | null | undefined, key: string) {
+    if (!url) {
+      return;
+    }
 
     try {
-      await navigator.clipboard.writeText(inviteUrl);
-      setMessage("Invite link copied to clipboard.");
+      await copyToClipboard(url);
+      setCopiedLinkKey(key);
+      setError(null);
     } catch {
       setError("Unable to copy link. Select and copy it manually.");
     }
@@ -219,7 +257,7 @@ export function TeamManagement({
             </p>
           ) : null}
 
-          <form action={handleInvite} className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_auto]">
+          <form action={inviteAction} className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_auto]">
             <div className="space-y-2">
               <label htmlFor="invite-email" className="text-sm font-medium">
                 Email address
@@ -230,7 +268,7 @@ export function TeamManagement({
                 type="email"
                 required
                 placeholder="estimator@company.com"
-                disabled={inviteBlockedBySeats || pending}
+                disabled={inviteBlockedBySeats || pending || isInviting}
                 className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
@@ -243,7 +281,7 @@ export function TeamManagement({
                 id="invite-role"
                 name="role"
                 defaultValue="estimator"
-                disabled={inviteBlockedBySeats || pending}
+                disabled={inviteBlockedBySeats || pending || isInviting}
                 className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {INVITABLE_ROLES.map((role) => (
@@ -255,9 +293,9 @@ export function TeamManagement({
             </div>
 
             <div className="flex items-end">
-              <Button type="submit" disabled={pending || inviteBlockedBySeats}>
+              <Button type="submit" disabled={pending || isInviting || inviteBlockedBySeats}>
                 <Mail data-icon="inline-start" />
-                {pending ? "Sending..." : "Send invite"}
+                {isInviting ? "Sending..." : "Send invite"}
               </Button>
             </div>
           </form>
@@ -284,15 +322,31 @@ export function TeamManagement({
       {message ? (
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
           <p>{message}</p>
-          {inviteUrl ? (
-            <button
+          {latestInviteUrl ? (
+            <Button
               type="button"
-              onClick={() => void copyInviteUrl()}
-              className="mt-2 inline-flex items-center gap-1 text-xs font-medium underline"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() =>
+                void handleCopyInviteLink(
+                  resolveInviteCopyUrl(latestInviteUrl),
+                  "latest-invite"
+                )
+              }
             >
-              <Copy className="size-3" />
-              Copy invite link
-            </button>
+              {copiedLinkKey === "latest-invite" ? (
+                <>
+                  <Check data-icon="inline-start" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy data-icon="inline-start" />
+                  Copy invite link
+                </>
+              )}
+            </Button>
           ) : null}
         </div>
       ) : null}
@@ -380,15 +434,42 @@ export function TeamManagement({
                   </p>
                 </div>
                 {canManage ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRevokeInvitation(invitation.id)}
-                    disabled={pending}
-                  >
-                    <Ban data-icon="inline-start" />
-                    Revoke
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        void handleCopyInviteLink(
+                          resolveInviteCopyUrl(null, invitation.token),
+                          invitation.id
+                        )
+                      }
+                      disabled={pending || isInviting}
+                    >
+                      {copiedLinkKey === invitation.id ? (
+                        <>
+                          <Check data-icon="inline-start" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy data-icon="inline-start" />
+                          Copy invite link
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRevokeInvitation(invitation.id)}
+                      disabled={pending || isInviting}
+                    >
+                      <Ban data-icon="inline-start" />
+                      Revoke
+                    </Button>
+                  </div>
                 ) : null}
               </div>
             ))}

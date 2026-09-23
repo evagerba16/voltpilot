@@ -108,6 +108,15 @@ export async function inviteTeamMember(formData: FormData) {
   };
 }
 
+export type InviteTeamMemberResult = Awaited<ReturnType<typeof inviteTeamMember>>;
+
+export async function inviteTeamMemberFormAction(
+  _previousState: InviteTeamMemberResult | null,
+  formData: FormData
+): Promise<InviteTeamMemberResult> {
+  return inviteTeamMember(formData);
+}
+
 export async function updateTeamMemberRole(memberId: string, role: TeamRole) {
   const context = await assertPermission("settings.team.manage");
 
