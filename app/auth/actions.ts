@@ -5,6 +5,11 @@ import { redirect } from "next/navigation";
 
 import { getTeamContext } from "@/lib/auth/get-team-context";
 import { friendlyAuthError } from "@/lib/auth/user-messages";
+import { finishInviteFlowAfterAuth } from "@/lib/auth/finish-invite-flow";
+import {
+  buildLoginPageHref,
+  isInviteLoginReturnPath,
+} from "@/lib/auth/invite-login";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { persistOrganizationPreference } from "@/lib/teams/actions";
 import { createClient } from "@/lib/supabase/server";
@@ -14,12 +19,35 @@ function getAuthSiteUrl() {
   return getSiteUrl();
 }
 
+function buildForgotPasswordReturnPath(formData: FormData, extra?: Record<string, string>) {
+  const params = new URLSearchParams();
+  const email = String(formData.get("email") ?? "").trim();
+  const next = safeRedirectPath(String(formData.get("next") ?? "/login"));
+
+  if (email) {
+    params.set("email", email);
+  }
+
+  if (next && next !== "/login") {
+    params.set("next", next);
+  }
+
+  if (extra) {
+    for (const [key, value] of Object.entries(extra)) {
+      params.set(key, value);
+    }
+  }
+
+  const query = params.toString();
+  return query ? `/forgot-password?${query}` : "/forgot-password";
+}
+
 export async function requestPasswordReset(formData: FormData) {
   const supabase = await createClient();
   const email = String(formData.get("email") ?? "").trim();
 
   if (!email) {
-    redirect("/forgot-password");
+    redirect(buildForgotPasswordReturnPath(formData));
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -28,11 +56,14 @@ export async function requestPasswordReset(formData: FormData) {
 
   if (error) {
     redirect(
-      `/forgot-password?attempt=1&error=${encodeURIComponent(friendlyAuthError(error, "password_reset"))}`
+      buildForgotPasswordReturnPath(formData, {
+        attempt: "1",
+        error: friendlyAuthError(error, "password_reset"),
+      })
     );
   }
 
-  redirect("/forgot-password?message=reset_email_sent");
+  redirect(buildForgotPasswordReturnPath(formData, { message: "reset_email_sent" }));
 }
 
 export async function updatePassword(formData: FormData) {
@@ -96,7 +127,11 @@ export async function signIn(formData: FormData) {
 
   if (error) {
     redirect(
-      `/login?error=${encodeURIComponent(friendlyAuthError(error, "sign_in"))}`
+      buildLoginPageHref({
+        error: friendlyAuthError(error, "sign_in"),
+        next: String(formData.get("next") ?? "/dashboard"),
+        email: String(formData.get("email") ?? ""),
+      })
     );
   }
 
@@ -109,6 +144,9 @@ export async function signIn(formData: FormData) {
   }
 
   const next = safeRedirectPath(String(formData.get("next") ?? "/dashboard"));
+  if (isInviteLoginReturnPath(next)) {
+    await finishInviteFlowAfterAuth(next, email);
+  }
   redirect(next);
 }
 
@@ -120,3 +158,4 @@ export async function signOut() {
   revalidatePath("/", "layout");
   redirect("/login");
 }
+

@@ -1,13 +1,4 @@
-"use client";
-
-import { useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-
-import { acceptTeamInvitation } from "@/app/(dashboard)/settings/team/actions";
 import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/components/ui/button-variants";
 import { TEAM_ROLE_LABELS, type InvitableRole } from "@/lib/teams/types";
 
 type InviteAcceptCardProps = {
@@ -15,8 +6,7 @@ type InviteAcceptCardProps = {
   organizationName: string;
   role: InvitableRole;
   email: string;
-  isAuthenticated: boolean;
-  userEmail?: string | null;
+  error?: string | null;
 };
 
 export function InviteAcceptCard({
@@ -24,33 +14,9 @@ export function InviteAcceptCard({
   organizationName,
   role,
   email,
-  isAuthenticated,
-  userEmail,
+  error: initialError = null,
 }: InviteAcceptCardProps) {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  const emailMatches =
-    isAuthenticated &&
-    userEmail &&
-    userEmail.toLowerCase() === email.toLowerCase();
-
-  function handleAccept() {
-    setError(null);
-
-    startTransition(async () => {
-      const result = await acceptTeamInvitation(token);
-
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-
-      router.push("/dashboard");
-      router.refresh();
-    });
-  }
+  const displayError = initialError;
 
   return (
     <div className="mx-auto max-w-lg rounded-xl border border-border bg-card p-8 shadow-sm">
@@ -67,53 +33,68 @@ export function InviteAcceptCard({
         </p>
       </div>
 
-      {!isAuthenticated ? (
-        <div className="mt-6 space-y-3">
+      <div className="mt-6 space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-base font-medium">Create your account</h2>
           <p className="text-sm text-muted-foreground">
-            Sign in or create an account with {email} to accept this invitation.
-          </p>
-          <Link
-            href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`}
-            className={buttonVariants({ className: "w-full" })}
-          >
-            Sign in to accept
-          </Link>
-        </div>
-      ) : !emailMatches ? (
-        <div className="mt-6 space-y-3">
-          <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
-            You are signed in as {userEmail}. Sign in with {email} to accept this
-            invitation.
-          </p>
-          <Link
-            href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`}
-            className={buttonVariants({ variant: "outline", className: "w-full" })}
-          >
-            Switch account
-          </Link>
-        </div>
-      ) : (
-        <div className="mt-6 space-y-3">
-          <Button onClick={handleAccept} disabled={pending} className="w-full">
-            {pending ? (
-              <>
-                <Loader2 className="size-4 animate-spin" data-icon="inline-start" />
-                Accepting...
-              </>
-            ) : (
-              "Accept invitation"
-            )}
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Accepting grants you access based on your assigned role. You can leave the
-            organization later by contacting an admin.
+            Set a password for {email} to join {organizationName}. No subscription
+            required — your team&apos;s plan covers you.
           </p>
         </div>
-      )}
 
-      {error ? (
+        <form action="/auth/invite-signup" method="POST" className="space-y-3">
+          <input type="hidden" name="token" value={token} />
+          <div className="space-y-2">
+            <label htmlFor="invite-email" className="text-sm font-medium">
+              Email
+            </label>
+            <input
+              id="invite-email"
+              name="email"
+              type="email"
+              value={email}
+              readOnly
+              tabIndex={-1}
+              className="flex h-10 w-full rounded-lg border border-input bg-muted/40 px-3 text-sm text-muted-foreground outline-none"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="invite-password" className="text-sm font-medium">
+              Password
+            </label>
+            <input
+              id="invite-password"
+              name="password"
+              type="password"
+              required
+              autoComplete="new-password"
+              minLength={6}
+              className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="invite-confirm-password" className="text-sm font-medium">
+              Confirm password
+            </label>
+            <input
+              id="invite-confirm-password"
+              name="confirmPassword"
+              type="password"
+              required
+              autoComplete="new-password"
+              minLength={6}
+              className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          </div>
+          <Button type="submit" className="w-full">
+            Create account and join
+          </Button>
+        </form>
+      </div>
+
+      {displayError ? (
         <p className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
+          {displayError}
         </p>
       ) : null}
     </div>

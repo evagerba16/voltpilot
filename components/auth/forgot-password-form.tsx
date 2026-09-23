@@ -9,12 +9,18 @@ import { Button } from "@/components/ui/button";
 
 type ForgotPasswordFormProps = {
   initialError: string | null;
+  initialEmail?: string;
+  returnNext?: string;
 };
 
-export function ForgotPasswordForm({ initialError }: ForgotPasswordFormProps) {
+export function ForgotPasswordForm({
+  initialError,
+  initialEmail = "",
+  returnNext = "/login",
+}: ForgotPasswordFormProps) {
   const router = useRouter();
   const [error, setError] = useState(initialError);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
 
   function handleEmailChange(event: React.ChangeEvent<HTMLInputElement>) {
     const nextEmail = event.target.value;
@@ -50,6 +56,7 @@ export function ForgotPasswordForm({ initialError }: ForgotPasswordFormProps) {
       ) : null}
 
       <form className="space-y-4">
+        <input type="hidden" name="next" value={returnNext} />
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium">
             Email
@@ -61,6 +68,7 @@ export function ForgotPasswordForm({ initialError }: ForgotPasswordFormProps) {
             required
             autoComplete="email"
             autoFocus
+            readOnly={Boolean(initialEmail)}
             value={email}
             onChange={handleEmailChange}
             className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"

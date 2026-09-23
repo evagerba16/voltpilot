@@ -12,7 +12,9 @@ import {
 import { getCompanySettings } from "@/lib/company/queries";
 import { resolveDashboardHeaderLabel } from "@/lib/dashboard/header-label";
 import { hasPermission } from "@/lib/teams/permissions";
-import { getTeamAccessDenial } from "@/lib/teams/queries";
+import { buildInviteLoginHref } from "@/lib/auth/invite-login";
+import { readPendingInviteToken } from "@/lib/teams/pending-invite-cookie";
+import { getInvitationByToken, getTeamAccessDenial } from "@/lib/teams/queries";
 
 export default async function DashboardLayout({
   children,
@@ -33,7 +35,25 @@ export default async function DashboardLayout({
         );
       }
 
+      const pendingInviteToken = await readPendingInviteToken();
+
+      if (pendingInviteToken) {
+        redirect(`/invite/${pendingInviteToken}`);
+      }
+
       redirect("/subscribe");
+    }
+
+    const pendingInviteToken = await readPendingInviteToken();
+    if (pendingInviteToken) {
+      try {
+        const invitation = await getInvitationByToken(pendingInviteToken);
+        if (invitation?.email) {
+          redirect(buildInviteLoginHref(pendingInviteToken, invitation.email));
+        }
+      } catch {
+        // Fall through to default login.
+      }
     }
 
     redirect("/login?next=/dashboard");

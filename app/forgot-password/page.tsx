@@ -3,6 +3,7 @@ import { Zap } from "lucide-react";
 
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 import { AlertBanner } from "@/components/ui/alert-banner";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { resolveAuthPageError } from "@/lib/auth/user-messages";
 
 type ForgotPasswordPageProps = {
@@ -10,6 +11,8 @@ type ForgotPasswordPageProps = {
     attempt?: string;
     error?: string;
     message?: string;
+    email?: string;
+    next?: string;
   }>;
 };
 
@@ -21,6 +24,8 @@ export default async function ForgotPasswordPage({
   const errorMessage = resetAttempted
     ? resolveAuthPageError(params.error, "password_reset")
     : null;
+  const prefilledEmail = params.email?.trim() ?? "";
+  const returnToLogin = safeRedirectPath(params.next ?? "/login");
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-muted/30 p-6">
@@ -49,13 +54,17 @@ export default async function ForgotPasswordPage({
             link shortly. The link expires after a short time.
           </AlertBanner>
         ) : (
-          <ForgotPasswordForm initialError={errorMessage} />
+          <ForgotPasswordForm
+            initialError={errorMessage}
+            initialEmail={prefilledEmail}
+            returnNext={returnToLogin}
+          />
         )}
 
         <p className="text-center text-sm text-muted-foreground">
           Remember your password?{" "}
           <Link
-            href="/login"
+            href={returnToLogin}
             className="font-medium text-foreground underline-offset-4 hover:underline"
           >
             Sign in
