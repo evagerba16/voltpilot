@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Zap } from "lucide-react";
 
 import { updatePassword } from "@/app/auth/actions";
+import { RecoveryHashSessionBootstrap } from "@/components/auth/recovery-hash-session-bootstrap";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth/get-user";
@@ -23,6 +24,7 @@ export default async function ResetPasswordPage({
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-muted/30 p-6">
+      <RecoveryHashSessionBootstrap />
       <Link
         href="/"
         className="mb-8 flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
