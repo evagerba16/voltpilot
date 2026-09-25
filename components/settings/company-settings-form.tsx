@@ -17,12 +17,39 @@ type CompanySettingsFormProps = {
   settings: CompanySettings;
   canEdit?: boolean;
   readOnlyMessage?: string;
+  isB2B?: boolean;
+  organizationName?: string;
 };
+
+function LogoPreview({ url }: { url: string }) {
+  const trimmed = url.trim();
+
+  if (!trimmed.startsWith("https://")) {
+    return null;
+  }
+
+  return (
+    <div className="mt-2 flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={trimmed}
+        alt="Company logo preview"
+        className="h-10 max-w-[160px] object-contain"
+        onError={(event) => {
+          event.currentTarget.style.display = "none";
+        }}
+      />
+      <p className="text-xs text-muted-foreground">Logo preview</p>
+    </div>
+  );
+}
 
 export function CompanySettingsForm({
   settings,
   canEdit = true,
   readOnlyMessage,
+  isB2B = false,
+  organizationName,
 }: CompanySettingsFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -48,7 +75,9 @@ export function CompanySettingsForm({
       <div className="border-b border-border px-6 py-4">
         <h1 className="text-xl font-semibold tracking-tight">Company profile</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Configure branding and default proposal content used on PDF exports.
+          {isB2B
+            ? "Your company profile appears on proposals, the customer portal, and team invitations."
+            : "Configure branding and default proposal content used on PDF exports."}
         </p>
       </div>
 
@@ -60,6 +89,17 @@ export function CompanySettingsForm({
         {error ? (
           <AlertBanner variant="error">{error}</AlertBanner>
         ) : null}
+
+        <div className="space-y-4">
+          <h2 className="text-base font-semibold">Business information</h2>
+          {isB2B ? (
+            <p className="text-sm text-muted-foreground">
+              Company name is used across VoltPilot. When an account owner saves changes, it also
+              updates the organization record
+              {organizationName?.trim() ? ` (currently “${organizationName.trim()}”)` : ""}.
+            </p>
+          ) : null}
+        </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
@@ -85,6 +125,14 @@ export function CompanySettingsForm({
               className={inputClassName}
               placeholder="https://example.com/logo.png"
             />
+            {isB2B && settings.company_logo_url ? (
+              <LogoPreview url={settings.company_logo_url} />
+            ) : null}
+            {isB2B ? (
+              <p className="text-xs text-muted-foreground">
+                Paste a public HTTPS link to your logo. Upload is not required.
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2 md:col-span-2">
             <label htmlFor="address_line1" className={labelClassName}>

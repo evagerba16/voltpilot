@@ -1,3 +1,4 @@
+import { resolveOrganizationDisplayName } from "@/lib/company/display-name";
 import type { CompanySettings } from "@/lib/company/types";
 
 export function formatCompanyAddress(settings: CompanySettings) {
@@ -10,9 +11,15 @@ export function formatCompanyAddress(settings: CompanySettings) {
   return lines;
 }
 
-export function companySettingsToSnapshot(settings: CompanySettings) {
+export function companySettingsToSnapshot(
+  settings: CompanySettings,
+  organizationName = ""
+) {
   return {
-    company_name: settings.company_name,
+    company_name: resolveOrganizationDisplayName(
+      settings.company_name,
+      organizationName
+    ),
     company_logo_url: settings.company_logo_url,
     address_lines: formatCompanyAddress(settings),
     phone: settings.phone,

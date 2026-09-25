@@ -23,6 +23,7 @@ import { JobCostingAiInsightsCompact } from "@/components/projects/job-costing-a
 import { JobPerformanceHandoff } from "@/components/projects/job-performance-handoff";
 import { ProjectAiInsightsCompact } from "@/components/projects/project-ai-insights-compact";
 import { ProjectChangeOrdersPanel } from "@/components/projects/project-change-orders-panel";
+import { ProjectAssignmentsPanel } from "@/components/projects/project-assignments-panel";
 import {
   ProjectEstimates,
   type ProjectEstimateItem,
@@ -39,6 +40,10 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { useToast } from "@/components/ui/toast-provider";
 import type { ProjectInsightWithAction } from "@/lib/projects/insights";
+import type {
+  AssignableTeamMember,
+  ProjectAssignmentView,
+} from "@/lib/projects/assignments";
 import type { ProjectProfile } from "@/lib/projects/profile-types";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/projects/format";
 import {
@@ -67,6 +72,10 @@ type ProjectDetailProps = {
   complexityScore: number;
   insightsSummary: string;
   initialTab?: ProjectDetailTabId;
+  showProjectAssignments?: boolean;
+  projectAssignments?: ProjectAssignmentView[];
+  assignableTeamMembers?: AssignableTeamMember[];
+  canManageProjectAssignments?: boolean;
 };
 
 function DetailItem({
@@ -109,6 +118,10 @@ export function ProjectDetail({
   insights,
   insightsSummary,
   initialTab = "overview",
+  showProjectAssignments = false,
+  projectAssignments = [],
+  assignableTeamMembers = [],
+  canManageProjectAssignments = false,
 }: ProjectDetailProps) {
   const router = useRouter();
   const { can } = usePermissions();
@@ -434,6 +447,14 @@ export function ProjectDetail({
               </Link>
             </div>
           </section>
+          {showProjectAssignments ? (
+            <ProjectAssignmentsPanel
+              projectId={project.id}
+              assignments={projectAssignments}
+              assignableMembers={assignableTeamMembers}
+              canManage={canManageProjectAssignments}
+            />
+          ) : null}
         </div>
       ),
     },

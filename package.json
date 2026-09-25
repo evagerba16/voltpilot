@@ -37,7 +37,9 @@
     "analytics:verify": "node scripts/verify-analytics.mjs",
     "estimates:verify": "node scripts/verify-estimate-calculations.mjs",
     "estimates:verify-backend": "node scripts/verify-estimate-backend.mjs",
-    "dev:verify-cache": "node scripts/verify-dev-cache-isolation.mjs"
+    "dev:verify-cache": "node scripts/verify-dev-cache-isolation.mjs",
+    "b2b:quotes:list": "node --env-file=.env.local --import tsx scripts/list-company-quotes.ts",
+    "b2b:provision": "node --env-file=.env.local --import tsx scripts/provision-b2b-from-quote.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -53,6 +55,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "recharts": "^3.9.2",
+    "server-only": "^0.0.1",
     "shadcn": "^4.13.0",
     "stripe": "^17.7.0",
     "tailwind-merge": "^3.6.0",
@@ -69,6 +72,7 @@
     "pg": "^8.22.0",
     "playwright": "^1.49.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

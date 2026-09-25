@@ -85,6 +85,7 @@ export type TeamPermission =
   | "customers.edit"
   | "projects.view"
   | "projects.edit"
+  | "projects.assign"
   | "estimates.view"
   | "estimates.edit"
   | "proposals.view"
@@ -95,6 +96,7 @@ export type TeamPermission =
   | "settings.company.edit"
   | "settings.team.view"
   | "settings.team.manage"
+  | "settings.audit.view"
   | "settings.billing.view"
   | "settings.billing.manage";
 

@@ -5,6 +5,7 @@ import { SettingsNav } from "@/components/settings/settings-nav";
 import { TeamManagement } from "@/components/settings/team-management";
 import { getTeamPageData } from "@/app/(dashboard)/settings/team/actions";
 import { getTeamContext } from "@/lib/auth/get-team-context";
+import { shouldShowAuditLogInSettings } from "@/lib/audit/queries";
 import { shouldShowBillingInSettings } from "@/lib/billing/entitlements";
 import { hasPermission } from "@/lib/teams/permissions";
 
@@ -19,9 +20,10 @@ export default async function TeamSettingsPage() {
     redirect("/settings");
   }
 
-  const [result, showBilling] = await Promise.all([
+  const [result, showBilling, showAuditLog] = await Promise.all([
     getTeamPageData(),
     shouldShowBillingInSettings(context.organizationId, context.permissions),
+    shouldShowAuditLogInSettings(context.organizationId, context.permissions),
   ]);
 
   if ("error" in result && result.error) {
@@ -32,6 +34,7 @@ export default async function TeamSettingsPage() {
           <div className="mx-auto max-w-5xl space-y-6">
             <SettingsNav
               showTeam={hasPermission(context.permissions, "settings.team.view")}
+              showAuditLog={showAuditLog}
               showBilling={showBilling}
             />
             <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-6 py-5 text-sm text-destructive">
@@ -55,6 +58,7 @@ export default async function TeamSettingsPage() {
           </div>
           <SettingsNav
             showTeam={hasPermission(context.permissions, "settings.team.view")}
+            showAuditLog={showAuditLog}
             showBilling={showBilling}
           />
           <TeamManagement

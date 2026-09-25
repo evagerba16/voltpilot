@@ -9,21 +9,28 @@ const SETTINGS_LINKS = [
   { href: "/settings", label: "Company" },
   { href: "/settings/equipment", label: "Equipment" },
   { href: "/settings/team", label: "Team" },
+  { href: "/settings/audit-log", label: "Audit log" },
   { href: "/settings/billing", label: "Billing" },
 ];
 
 type SettingsNavProps = {
   showTeam?: boolean;
+  showAuditLog?: boolean;
   showBilling?: boolean;
 };
 
 export function SettingsNav({
   showTeam = true,
+  showAuditLog = false,
   showBilling = false,
 }: SettingsNavProps) {
   const pathname = usePathname();
   const links = SETTINGS_LINKS.filter((link) => {
     if (link.href === "/settings/team" && !showTeam) {
+      return false;
+    }
+
+    if (link.href === "/settings/audit-log" && !showAuditLog) {
       return false;
     }
 

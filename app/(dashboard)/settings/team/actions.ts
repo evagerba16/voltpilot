@@ -13,14 +13,18 @@ import { getUser } from "@/lib/auth/get-user";
 import { sendInvitationEmail } from "@/lib/email/send-invitation";
 import { assertValidEmail } from "@/lib/security/url-validation";
 import { canAssignRole, canManageRole } from "@/lib/teams/permissions";
+import { getOrganizationDisplayName } from "@/lib/company/queries";
 import { persistOrganizationPreference } from "@/lib/teams/actions";
-import { getTeamAccessDenial, getTeamOverview } from "@/lib/teams/queries";
+import { acceptTeamInvitationCore } from "@/lib/teams/accept-team-invitation-core";
+import { clearPendingInviteToken } from "@/lib/teams/pending-invite-cookie";
+import { getTeamOverview } from "@/lib/teams/queries";
 import {
   INVITABLE_ROLES,
   TEAM_ROLE_LABELS,
   type InvitableRole,
   type TeamRole,
 } from "@/lib/teams/types";
+import { logCompanyAuditEvent } from "@/lib/audit/log-company-event";
 import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/site-url";
 
@@ -91,15 +95,30 @@ export async function inviteTeamMember(formData: FormData) {
   }
 
   const inviteUrl = `${getSiteUrl()}/invite/${invitation.token}`;
+  const organizationDisplayName = await getOrganizationDisplayName(
+    context.organizationId,
+    context.userId
+  );
   const emailResult = await sendInvitationEmail({
     to: email,
-    organizationName: context.organizationName,
+    organizationName: organizationDisplayName,
     inviterEmail: context.userEmail,
     roleLabel: TEAM_ROLE_LABELS[role],
     inviteUrl,
   });
 
+  await logCompanyAuditEvent({
+    organizationId: context.organizationId,
+    actorUserId: context.userId,
+    actorDisplayName: context.displayName,
+    eventType: "team_member_invited",
+    summary: `${context.displayName} invited ${email} as ${TEAM_ROLE_LABELS[role]}`,
+    entityType: "team_member",
+    metadata: { email, role },
+  });
+
   revalidatePath("/settings/team");
+  revalidatePath("/settings/audit-log");
   return {
     success: true,
     inviteUrl,
@@ -165,7 +184,22 @@ export async function updateTeamMemberRole(memberId: string, role: TeamRole) {
     };
   }
 
+  const memberLabel = member.display_name?.trim() || member.email;
+  const previousRole = member.role as TeamRole;
+
+  await logCompanyAuditEvent({
+    organizationId: context.organizationId,
+    actorUserId: context.userId,
+    actorDisplayName: context.displayName,
+    eventType: "team_member_role_changed",
+    summary: `${context.displayName} changed ${memberLabel}'s role from ${TEAM_ROLE_LABELS[previousRole]} to ${TEAM_ROLE_LABELS[role]}`,
+    entityType: "team_member",
+    entityId: memberId,
+    metadata: { previousRole, newRole: role },
+  });
+
   revalidatePath("/settings/team");
+  revalidatePath("/settings/audit-log");
   return { success: true };
 }
 
@@ -211,7 +245,20 @@ export async function deactivateTeamMember(memberId: string) {
     };
   }
 
+  const memberLabel = member.display_name?.trim() || member.email;
+
+  await logCompanyAuditEvent({
+    organizationId: context.organizationId,
+    actorUserId: context.userId,
+    actorDisplayName: context.displayName,
+    eventType: "team_member_deactivated",
+    summary: `${context.displayName} deactivated ${memberLabel}`,
+    entityType: "team_member",
+    entityId: memberId,
+  });
+
   revalidatePath("/settings/team");
+  revalidatePath("/settings/audit-log");
   return { success: true };
 }
 
@@ -258,13 +305,37 @@ export async function reactivateTeamMember(memberId: string) {
     };
   }
 
+  const memberLabel = member.display_name?.trim() || member.email;
+
+  await logCompanyAuditEvent({
+    organizationId: context.organizationId,
+    actorUserId: context.userId,
+    actorDisplayName: context.displayName,
+    eventType: "team_member_reactivated",
+    summary: `${context.displayName} reactivated ${memberLabel}`,
+    entityType: "team_member",
+    entityId: memberId,
+  });
+
   revalidatePath("/settings/team");
+  revalidatePath("/settings/audit-log");
   return { success: true };
 }
 
 export async function revokeTeamInvitation(invitationId: string) {
   const context = await assertPermission("settings.team.manage");
   const supabase = await createClient();
+
+  const { data: invitation, error: fetchError } = await supabase
+    .from("team_invitations")
+    .select("id, email, role")
+    .eq("id", invitationId)
+    .eq("organization_id", context.organizationId)
+    .maybeSingle();
+
+  if (fetchError || !invitation) {
+    return { error: "This invitation could not be found." };
+  }
 
   const { error } = await supabase
     .from("team_invitations")
@@ -276,7 +347,19 @@ export async function revokeTeamInvitation(invitationId: string) {
     return { error: "We couldn't revoke this invitation. Try again in a moment." };
   }
 
+  await logCompanyAuditEvent({
+    organizationId: context.organizationId,
+    actorUserId: context.userId,
+    actorDisplayName: context.displayName,
+    eventType: "team_invitation_revoked",
+    summary: `${context.displayName} revoked the invitation for ${invitation.email}`,
+    entityType: "team_invitation",
+    entityId: invitationId,
+    metadata: { email: invitation.email, role: invitation.role },
+  });
+
   revalidatePath("/settings/team");
+  revalidatePath("/settings/audit-log");
   return { success: true };
 }
 
@@ -287,67 +370,23 @@ export async function acceptTeamInvitation(token: string) {
     return { error: "Sign in to accept this invitation." };
   }
 
-  const denial = await getTeamAccessDenial(user.id);
-
-  if (denial === "deactivated") {
-    return {
-      error:
-        "Your account has been deactivated. Contact your organization admin.",
-    };
-  }
-
   const supabase = await createClient();
+  const result = await acceptTeamInvitationCore(supabase, user, token);
 
-  const { data, error } = await supabase.rpc("accept_team_invitation_by_token", {
-    p_token: token,
-  });
-
-  if (error) {
-    return { error: "We couldn't accept this invitation. Try again in a moment." };
+  if ("error" in result) {
+    return result;
   }
 
-  const result = data as {
-    success: boolean;
-    error?: string;
-    organization_id?: string;
-  };
-
-  if (!result.success) {
-    const rpcError = result.error?.toLowerCase() ?? "";
-
-    if (rpcError.includes("expired")) {
-      return { error: "This invitation has expired. Ask your admin to send a new one." };
-    }
-
-    if (rpcError.includes("revoked")) {
-      return { error: "This invitation is no longer active." };
-    }
-
-    if (rpcError.includes("email")) {
-      return {
-        error:
-          "Sign in with the email address this invitation was sent to, then try again.",
-      };
-    }
-
-    if (rpcError.includes("seat limit")) {
-      return {
-        error:
-          "This company has reached its seat limit. Ask your admin to free a seat or upgrade your plan.",
-      };
-    }
-
-    return { error: "We couldn't accept this invitation. Try again in a moment." };
+  if (result.organizationId) {
+    await persistOrganizationPreference(result.organizationId);
   }
 
-  if (result.organization_id) {
-    await persistOrganizationPreference(result.organization_id);
-  }
+  await clearPendingInviteToken();
 
   revalidatePath("/settings/team");
   revalidatePath("/dashboard");
 
-  return { success: true, organizationId: result.organization_id };
+  return { success: true, organizationId: result.organizationId };
 }
 
 export async function getTeamPageData() {

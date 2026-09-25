@@ -6,6 +6,14 @@ import { ProjectDetail } from "@/components/projects/project-detail";
 import { getProjectInsights } from "@/lib/ai/project-insights";
 import { getTeamContext } from "@/lib/auth/get-team-context";
 import { buildProfileInsights } from "@/lib/projects/insights";
+import {
+  getAssignableTeamMembers,
+  getProjectAssignments,
+} from "@/lib/projects/assignments";
+import {
+  canViewProjectAssignmentsSection,
+  getProjectAccessContext,
+} from "@/lib/projects/project-access";
 import { getProjectById } from "@/lib/projects/queries";
 import { getProjectProfile } from "@/lib/projects/profile";
 import {
@@ -36,6 +44,33 @@ export default async function ProjectDetailPage({
 
   if (!project || !profile) {
     notFound();
+  }
+
+  let showProjectAssignments = false;
+  let projectAssignments: Awaited<ReturnType<typeof getProjectAssignments>> = [];
+  let assignableTeamMembers: Awaited<ReturnType<typeof getAssignableTeamMembers>> =
+    [];
+  let canManageProjectAssignments = false;
+
+  if (context?.organizationId) {
+    const access = await getProjectAccessContext(
+      context.organizationId,
+      context.role
+    );
+
+    canManageProjectAssignments = access.canManageAssignments;
+    showProjectAssignments =
+      access.enforceAssignments &&
+      canViewProjectAssignmentsSection(context.role);
+
+    if (showProjectAssignments) {
+      [projectAssignments, assignableTeamMembers] = await Promise.all([
+        getProjectAssignments(id),
+        canManageProjectAssignments
+          ? getAssignableTeamMembers(context.organizationId, id)
+          : Promise.resolve([]),
+      ]);
+    }
   }
 
   const defaultTab: ProjectDetailTabId =
@@ -91,6 +126,10 @@ export default async function ProjectDetailPage({
             `${project.project_name} has ${profile.estimates.length} estimate(s) and ${profile.proposals.length} proposal(s).`
           }
           initialTab={initialTab}
+          showProjectAssignments={showProjectAssignments}
+          projectAssignments={projectAssignments}
+          assignableTeamMembers={assignableTeamMembers}
+          canManageProjectAssignments={canManageProjectAssignments}
         />
       </PageMain>
     </>

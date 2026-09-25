@@ -1,4 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { getTeamContext } from "@/lib/auth/get-team-context";
+import { getAssignedProjectIdsForMember } from "@/lib/projects/assignments";
+import { getProjectAccessContext } from "@/lib/projects/project-access";
 import { mapProjectRow, parseNumber } from "@/lib/projects/format";
 import {
   PROJECTS_PAGE_SIZE,
@@ -81,6 +84,37 @@ function normalizeCustomer(customer: unknown) {
   return customer as ProjectWithCustomer["customer"] | undefined;
 }
 
+const EMPTY_PROJECT_ID = "00000000-0000-0000-0000-000000000000";
+
+/** Returns project id filter when B2B assigned-mode list should narrow; null = no extra filter. */
+async function getAssignmentListProjectIds(): Promise<string[] | null> {
+  const context = await getTeamContext();
+
+  if (!context) {
+    return null;
+  }
+
+  const access = await getProjectAccessContext(
+    context.organizationId,
+    context.role
+  );
+
+  if (!access.filterListByAssignment) {
+    return null;
+  }
+
+  const projectIds = await getAssignedProjectIdsForMember(
+    context.organizationId,
+    context.memberId
+  );
+
+  if (projectIds.length === 0) {
+    return [EMPTY_PROJECT_ID];
+  }
+
+  return projectIds;
+}
+
 export async function getProjects({
   page = 1,
   search = "",
@@ -155,6 +189,11 @@ export async function getProjects({
     }
 
     query = query.or(projectFilters.join(","));
+  }
+
+  const assignmentProjectIds = await getAssignmentListProjectIds();
+  if (assignmentProjectIds) {
+    query = query.in("id", assignmentProjectIds);
   }
 
   const { data, error, count } = await query;
@@ -261,12 +300,19 @@ export async function getProjectEstimates(projectId: string) {
 export async function getProjectStats() {
   const supabase = await createClient();
 
+  let projectsQuery = supabase
+    .from("projects")
+    .select("status, estimated_value, archived_at")
+    .is("archived_at", null)
+    .neq("status", "Archived");
+
+  const assignmentProjectIds = await getAssignmentListProjectIds();
+  if (assignmentProjectIds) {
+    projectsQuery = projectsQuery.in("id", assignmentProjectIds);
+  }
+
   const [projectsResult, estimatesResult] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("status, estimated_value, archived_at")
-      .is("archived_at", null)
-      .neq("status", "Archived"),
+    projectsQuery,
     supabase.from("estimates").select("status, profit_margin_percent"),
   ]);
 
@@ -324,7 +370,7 @@ export async function getProjectStats() {
 
 export async function getRecentProjects(limit = 5) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("projects")
     .select(
       `
@@ -341,6 +387,13 @@ export async function getRecentProjects(limit = 5) {
     .neq("status", "Archived")
     .order("updated_at", { ascending: false })
     .limit(limit);
+
+  const assignmentProjectIds = await getAssignmentListProjectIds();
+  if (assignmentProjectIds) {
+    query = query.in("id", assignmentProjectIds);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(error.message);

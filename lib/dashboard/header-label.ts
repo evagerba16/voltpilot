@@ -1,6 +1,8 @@
 import { getUserFirstName } from "@/lib/auth/display-name";
-import { DEFAULT_COMPANY_NAME } from "@/lib/company/types";
-
+import {
+  isConfiguredOrganizationDisplayName,
+  resolveOrganizationDisplayName,
+} from "@/lib/company/display-name";
 import type { User } from "@supabase/supabase-js";
 
 type ResolveDashboardHeaderLabelInput = {
@@ -9,22 +11,18 @@ type ResolveDashboardHeaderLabelInput = {
   user?: User | null;
 };
 
-function isConfiguredCompanyName(name?: string | null) {
-  const trimmed = name?.trim();
-  return Boolean(trimmed && trimmed !== DEFAULT_COMPANY_NAME);
-}
-
 export function resolveDashboardHeaderLabel({
   companyName,
   organizationName,
   user,
 }: ResolveDashboardHeaderLabelInput) {
-  if (isConfiguredCompanyName(companyName)) {
-    return companyName!.trim();
-  }
+  const displayName = resolveOrganizationDisplayName(
+    companyName ?? "",
+    organizationName ?? ""
+  );
 
-  if (isConfiguredCompanyName(organizationName)) {
-    return organizationName!.trim();
+  if (isConfiguredOrganizationDisplayName(displayName)) {
+    return displayName;
   }
 
   const firstName = getUserFirstName(user);

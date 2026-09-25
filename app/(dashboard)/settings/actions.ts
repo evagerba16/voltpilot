@@ -8,6 +8,7 @@ import {
 } from "@/lib/security/url-validation";
 import { assertPermission } from "@/lib/auth/get-team-context";
 import type { CompanySettingsInput } from "@/lib/company/types";
+import { logCompanyAuditEvent } from "@/lib/audit/log-company-event";
 import { createClient } from "@/lib/supabase/server";
 
 function parseSettingsInput(formData: FormData): CompanySettingsInput {
@@ -94,7 +95,33 @@ export async function saveCompanySettings(formData: FormData) {
     };
   }
 
+  if (context.role === "owner") {
+    const { error: orgError } = await supabase
+      .from("organizations")
+      .update({ name: input.company_name })
+      .eq("id", context.organizationId);
+
+    if (orgError && !orgError.message.includes("organizations")) {
+      return {
+        error: "Company profile saved, but the organization name could not be updated.",
+      };
+    }
+  }
+
+  await logCompanyAuditEvent({
+    organizationId: context.organizationId,
+    actorUserId: context.userId,
+    actorDisplayName: context.displayName,
+    eventType: "company_settings_updated",
+    summary: `${context.displayName} updated company profile and settings`,
+    entityType: "company_settings",
+    entityId: context.organizationId,
+  });
+
   revalidatePath("/settings");
+  revalidatePath("/settings/team");
+  revalidatePath("/dashboard");
   revalidatePath("/proposals");
+  revalidatePath("/settings/audit-log");
   return { success: true };
 }

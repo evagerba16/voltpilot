@@ -190,6 +190,7 @@ export async function createProposalFromEstimate(estimateId: string) {
     profitMarginPercent: result.estimate.profit_margin_percent,
     taxPercent: result.estimate.tax_percent,
     company,
+    organizationName: context.organizationName,
     projectName: result.estimate.project.project_name,
     customerContactName: result.estimate.project.customer.contact_name,
   });

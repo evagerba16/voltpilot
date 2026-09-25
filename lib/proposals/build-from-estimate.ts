@@ -161,6 +161,7 @@ export function buildProposalSeedData({
   profitMarginPercent,
   taxPercent,
   company,
+  organizationName,
   projectName,
   customerContactName,
 }: {
@@ -170,6 +171,7 @@ export function buildProposalSeedData({
   profitMarginPercent: number;
   taxPercent: number;
   company: CompanySettings;
+  organizationName?: string;
   projectName: string;
   customerContactName: string;
 }) {
@@ -190,7 +192,7 @@ export function buildProposalSeedData({
   return {
     content,
     estimateSnapshot,
-    companySnapshot: companySettingsToSnapshot(company),
+    companySnapshot: companySettingsToSnapshot(company, organizationName ?? ""),
     amount: estimateSnapshot.selling_price,
   };
 }

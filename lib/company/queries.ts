@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveOrganizationDisplayName } from "@/lib/company/display-name";
 import {
   DEFAULT_COMPANY_NAME,
   DEFAULT_EXCLUSIONS,
@@ -61,4 +62,25 @@ export async function getCompanySettings(
   }
 
   return data as CompanySettings;
+}
+
+export async function getOrganizationDisplayName(
+  organizationId: string,
+  userId?: string
+): Promise<string> {
+  const supabase = await createClient();
+
+  const [settings, orgResult] = await Promise.all([
+    getCompanySettings(organizationId, userId),
+    supabase.from("organizations").select("name").eq("id", organizationId).maybeSingle(),
+  ]);
+
+  if (orgResult.error && !orgResult.error.message.includes("organizations")) {
+    throw new Error(orgResult.error.message);
+  }
+
+  return resolveOrganizationDisplayName(
+    settings.company_name,
+    orgResult.data?.name ?? ""
+  );
 }
