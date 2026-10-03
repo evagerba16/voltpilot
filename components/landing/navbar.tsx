@@ -7,6 +7,7 @@ const navLinks = [
   { href: "#features", label: "Features" },
   { href: "#why-voltpilot", label: "Why VoltPilot" },
   { href: "#pricing", label: "Pricing" },
+  { href: "#contact", label: "Contact" },
 ];
 
 export function Navbar() {

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { SiteJsonLd } from "@/components/site/site-json-ld";
+import { VOLTPILOT_FOUNDER_NAME } from "@/lib/site/structured-data";
 import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
@@ -33,6 +35,8 @@ export const metadata: Metadata = {
     description:
       "Estimating and proposal software built for residential and commercial electrical contractors.",
   },
+  authors: [{ name: VOLTPILOT_FOUNDER_NAME }],
+  creator: VOLTPILOT_FOUNDER_NAME,
 };
 
 export default function RootLayout({
@@ -45,6 +49,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <SiteJsonLd />
         {children}
       </body>
     </html>
