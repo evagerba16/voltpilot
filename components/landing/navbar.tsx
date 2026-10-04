@@ -6,7 +6,7 @@ import { NavAuth } from "@/components/landing/nav-auth";
 const navLinks = [
   { href: "#features", label: "Features" },
   { href: "#why-voltpilot", label: "Why VoltPilot" },
-  { href: "#pricing", label: "Pricing" },
+  { href: "#pricing", label: "Services" },
   { href: "#contact", label: "Contact" },
 ];
 

@@ -88,7 +88,6 @@ export function Pricing() {
             </p>
             <p className="mt-6 text-4xl font-bold tracking-tight">
               Custom
-              <span className="text-base font-normal text-muted-foreground"> pricing</span>
             </p>
 
             <ul className="mt-6 space-y-3">
