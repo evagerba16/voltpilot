@@ -5,7 +5,7 @@ const footerLinks = {
   Product: [
     { label: "Features", href: "#features" },
     { label: "Why VoltPilot", href: "#why-voltpilot" },
-    { label: "Pricing", href: "#pricing" },
+    { label: "Services", href: "#pricing" },
     { label: "Contact", href: "#contact" },
   ],
   Legal: [
