@@ -2,7 +2,6 @@ import { type EmailOtpType } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
-import { clearSupabaseAuthCookies } from "@/lib/auth/supabase-auth-cookies";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler-client";
 import { clearPendingInviteTokenOnResponse } from "@/lib/teams/pending-invite-cookie-response";
 
@@ -95,17 +94,10 @@ export async function GET(request: NextRequest) {
 
   const redirectUrl = resolvePostAuthRedirect(request, next);
 
-  const { supabase, getResponse, redirectTo } = createSupabaseRouteHandlerClient(
+  const { supabase, redirectTo } = createSupabaseRouteHandlerClient(
     request,
     () => redirectUrl
   );
-
-  if (passwordRecovery) {
-    await supabase.auth.signOut();
-    const prep = getResponse();
-    clearSupabaseAuthCookies(request, prep);
-    clearPendingInviteTokenOnResponse(prep);
-  }
 
   const authError = hasOtpVerify
     ? (

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { RecoveryHashLandingRedirect } from "@/components/auth/recovery-hash-landing-redirect";
 import { SiteJsonLd } from "@/components/site/site-json-ld";
 import { VOLTPILOT_FOUNDER_NAME } from "@/lib/site/structured-data";
 import { getSiteUrl } from "@/lib/site-url";
@@ -49,6 +50,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <RecoveryHashLandingRedirect />
         <SiteJsonLd />
         {children}
       </body>

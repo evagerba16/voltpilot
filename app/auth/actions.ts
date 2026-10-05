@@ -12,12 +12,8 @@ import {
 } from "@/lib/auth/invite-login";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { persistOrganizationPreference } from "@/lib/teams/actions";
+import { buildAuthCallbackRedirect } from "@/lib/auth/auth-callback-url";
 import { createClient } from "@/lib/supabase/server";
-import { getSiteUrl } from "@/lib/site-url";
-
-function getAuthSiteUrl() {
-  return getSiteUrl();
-}
 
 function buildForgotPasswordReturnPath(formData: FormData, extra?: Record<string, string>) {
   const params = new URLSearchParams();
@@ -51,7 +47,7 @@ export async function requestPasswordReset(formData: FormData) {
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${getAuthSiteUrl()}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
+    redirectTo: buildAuthCallbackRedirect("/reset-password"),
   });
 
   if (error) {
