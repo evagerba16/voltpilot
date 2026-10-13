@@ -76,7 +76,7 @@ function checkPaymentSchedule(state: ProposalEditorState): ProposalReviewSuggest
   return {
     id: "payment-schedule",
     kind: "warning",
-    message: "Clarify payment schedule.",
+    message: "Add payment terms in Terms & conditions (e.g. deposit, net 30).",
     field: "terms_and_conditions",
     pointsDeducted: 10,
   };
@@ -108,7 +108,7 @@ function checkProjectTimeline(state: ProposalEditorState): ProposalReviewSuggest
   return {
     id: "project-timeline",
     kind: "warning",
-    message: "Add project timeline.",
+    message: "Add schedule/timeline language in Scope of work.",
     field: "scope_of_work",
     pointsDeducted: 9,
   };
@@ -138,7 +138,7 @@ function checkPermitInformation(state: ProposalEditorState): ProposalReviewSugge
   return {
     id: "permit-info",
     kind: "warning",
-    message: "Include permit information.",
+    message: "Add permit/inspection responsibility in Assumptions (or Exclusions).",
     field: "assumptions",
     pointsDeducted: 8,
   };

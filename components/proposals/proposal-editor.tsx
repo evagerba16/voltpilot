@@ -641,6 +641,29 @@ export function ProposalEditor({
                 <label htmlFor={field} className={labelClassName}>
                   {label}
                 </label>
+                {field === "terms_and_conditions" ? (
+                  <p className="text-xs text-muted-foreground">
+                    Send readiness: include payment terms (e.g. deposit, net 30).
+                  </p>
+                ) : null}
+                {field === "scope_of_work" ? (
+                  <p className="text-xs text-muted-foreground">
+                    Send readiness: include schedule or timeline language (start, duration,
+                    completion).
+                  </p>
+                ) : null}
+                {field === "assumptions" ? (
+                  <p className="text-xs text-muted-foreground">
+                    Send readiness: note permit and inspection responsibility (Exclusions
+                    also counts).
+                  </p>
+                ) : null}
+                {field === "exclusions" ? (
+                  <p className="text-xs text-muted-foreground">
+                    Send readiness: permit/inspection exclusions count toward permit
+                    information.
+                  </p>
+                ) : null}
                 <textarea
                   id={field}
                   rows={field === "scope_of_work" ? 5 : 4}
