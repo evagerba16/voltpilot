@@ -8,11 +8,14 @@ import {
   archiveProposal,
   autosaveProposal,
   deleteProposal,
+  devSendProposalForPortalTest,
   duplicateProposal,
   markProposalAcceptedManually,
   saveProposal,
   updateProposalBranding,
 } from "@/app/(dashboard)/proposals/actions";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import {
   AiProposalReviewCard,
 } from "@/components/proposals/ai-proposal-review-card";
@@ -41,6 +44,7 @@ import { useConfirm } from "@/components/ui/confirm-provider";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { useToast } from "@/components/ui/toast-provider";
 import { mapProposalToEditorState } from "@/lib/proposals/build-from-estimate";
+import { isDevPortalTestUiVisible } from "@/lib/proposals/dev-portal-test";
 import { formatCurrency } from "@/lib/proposals/format";
 import { resolveProposalPrimaryAction } from "@/lib/proposals/primary-action";
 import {
@@ -111,6 +115,7 @@ export function ProposalEditor({
   const [workflowOpen, setWorkflowOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [devPortalPending, startDevPortalTransition] = useTransition();
   const confirm = useConfirm();
   const toast = useToast();
 
@@ -379,6 +384,40 @@ export function ProposalEditor({
     window.print();
   }
 
+  const showDevPortalTestPanel =
+    isDevPortalTestUiVisible() && canEdit && !isAccepted && Boolean(proposal.public_token);
+
+  function handleDevPortalTestSend() {
+    startDevPortalTransition(async () => {
+      const result = await devSendProposalForPortalTest(proposal.id);
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success(
+        result.alreadySent
+          ? "Portal link is ready — proposal was already sent."
+          : "Marked as sent for portal test (no email sent)."
+      );
+      router.refresh();
+    });
+  }
+
+  async function handleCopyPortalLink() {
+    if (!proposal.public_token) return;
+
+    const url = `${window.location.origin}/p/${proposal.public_token}`;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Portal link copied.");
+    } catch {
+      toast.error("Couldn't copy the link. Copy it from the address bar after opening the portal.");
+    }
+  }
+
   function handleInsightAction(insight: ProposalInsightWithAction) {
     if (insight.onActionField === "send") {
       setSendOpen(true);
@@ -442,6 +481,49 @@ export function ProposalEditor({
         savedAt={savedAt}
         onOpenOverflow={() => setOverflowOpen(true)}
       />
+
+      {showDevPortalTestPanel ? (
+        <section
+          className="rounded-2xl border border-dashed border-amber-500/50 bg-amber-500/[0.04] px-5 py-4"
+          aria-label="Development portal test"
+        >
+          <p className="text-sm font-medium">Development: portal e-sign test</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Set{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">
+              VOLTPILOT_DEV_PORTAL_TEST=1
+            </code>{" "}
+            in <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">.env.local</code>.
+            Skips readiness and email; uses the real customer portal and acceptance flow.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={devPortalPending}
+              onClick={handleDevPortalTestSend}
+            >
+              {devPortalPending ? "Updating…" : "Mark as sent (no email)"}
+            </Button>
+            <Link
+              href={`/p/${proposal.public_token}`}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              Open customer portal
+            </Link>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleCopyPortalLink()}
+            >
+              Copy portal link
+            </Button>
+          </div>
+        </section>
+      ) : null}
 
       {!isAccepted ? (
         <ProposalWorkspacePriceContext

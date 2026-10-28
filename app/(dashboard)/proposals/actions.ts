@@ -42,6 +42,7 @@ import {
 import { getEstimateById, mapEstimateToBuilderState } from "@/lib/estimates/queries";
 import { validateEstimatePricing } from "@/lib/estimates/pricing-state";
 import { createClient } from "@/lib/supabase/server";
+import { assertDevPortalTestEnabled } from "@/lib/proposals/dev-portal-test";
 import { getSiteUrl } from "@/lib/site-url";
 import type { ProposalEditorState } from "@/lib/proposals/types";
 
@@ -544,6 +545,76 @@ export async function restoreProposalRevision(
     state: snapshot,
     savedAt: result.savedAt,
   };
+}
+
+/** Development-only: mark Sent for portal e-sign testing without email (see dev-portal-test.ts). */
+export async function devSendProposalForPortalTest(proposalId: string) {
+  const gate = assertDevPortalTestEnabled();
+  if (gate) {
+    return gate;
+  }
+
+  const context = await assertPermission("proposals.edit");
+  const editable = await assertProposalEditable(proposalId, context.organizationId);
+
+  if ("error" in editable) {
+    return { error: editable.error };
+  }
+
+  const proposal = editable.proposal;
+
+  if (!proposal.public_token) {
+    return { error: "This proposal isn't ready to send yet. Save it and try again." };
+  }
+
+  const portalUrl = `${getSiteUrl()}/p/${proposal.public_token}`;
+
+  if (["Sent", "Viewed"].includes(proposal.status)) {
+    revalidatePath("/proposals");
+    revalidatePath(`/proposals/${proposalId}`);
+    revalidatePath(`/p/${proposal.public_token}`);
+    return { success: true as const, portalUrl, alreadySent: true as const };
+  }
+
+  const supabase = await createClient();
+  const sentAt = new Date().toISOString();
+  const previousStatus = proposal.status;
+
+  const { error } = await supabase
+    .from("proposals")
+    .update({
+      status: "Sent",
+      sent_at: sentAt,
+    })
+    .eq("id", proposalId)
+    .eq("organization_id", context.organizationId);
+
+  if (error) {
+    return { error: "We couldn't update this proposal for portal testing. Try again." };
+  }
+
+  if (previousStatus !== "Sent") {
+    await recordProposalStatusChange({
+      proposalId,
+      organizationId: context.organizationId,
+      previousStatus,
+      newStatus: "Sent",
+      changedBy: context.userId,
+      note: "[dev] Portal test send (no email)",
+    });
+  }
+
+  await supabase
+    .from("projects")
+    .update({ status: "Proposal Sent" })
+    .eq("id", proposal.project_id)
+    .eq("organization_id", context.organizationId);
+
+  revalidatePath("/proposals");
+  revalidatePath(`/proposals/${proposalId}`);
+  revalidatePath(`/p/${proposal.public_token}`);
+
+  return { success: true as const, portalUrl, sentAt, alreadySent: false as const };
 }
 
 export async function markProposalSent(proposalId: string) {
