@@ -26,6 +26,7 @@ type EstimateSectionProps = {
   category: EstimateCategory;
   label: string;
   items: EstimateLineItemInput[];
+  highlightedLineId?: string | null;
   selectedIds: Set<string>;
   onToggleSelect: (localId: string) => void;
   onToggleSelectAll: (localIds: string[], selected: boolean) => void;
@@ -54,12 +55,14 @@ function renderDescriptionCell({
   localId,
   onApplyPickerSelection,
   onUpdateRow,
+  markEstimateLineFocus,
 }: {
   category: EstimateCategory;
   item: EstimateLineItemInput;
   localId: string;
   onApplyPickerSelection?: EstimateSectionProps["onApplyPickerSelection"];
   onUpdateRow: EstimateSectionProps["onUpdateRow"];
+  markEstimateLineFocus?: boolean;
 }) {
   const handlePickerChange = (selection: LineItemPickerSelection) => {
     if (onApplyPickerSelection) {
@@ -97,6 +100,7 @@ function renderDescriptionCell({
         category={category}
         value={item.description}
         onChange={handlePickerChange}
+        markAsEstimateLineFocus={markEstimateLineFocus}
       />
     );
   }
@@ -109,6 +113,7 @@ function renderDescriptionCell({
       }
       placeholder="Describe the line item"
       className={cellInputClassName}
+      {...(markEstimateLineFocus ? { "data-estimate-line-focus": "" } : {})}
     />
   );
 }
@@ -144,10 +149,12 @@ function DecimalCellInput({
   value,
   onChange,
   className,
+  markAsEstimateUnitCostFocus,
 }: {
   value: number;
   onChange: (value: number) => void;
   className?: string;
+  markAsEstimateUnitCostFocus?: boolean;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const isEditing = draft !== null;
@@ -175,6 +182,7 @@ function DecimalCellInput({
         onChange(parseDecimalInput(next));
       }}
       className={className}
+      {...(markAsEstimateUnitCostFocus ? { "data-estimate-line-unit-cost": "" } : {})}
     />
   );
 }
@@ -185,6 +193,7 @@ function EstimateSectionComponent({
   category,
   label,
   items,
+  highlightedLineId = null,
   selectedIds,
   onToggleSelect,
   onToggleSelectAll,
@@ -225,7 +234,10 @@ function EstimateSectionComponent({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
+    <div
+      id={`estimate-section-${category}`}
+      className="overflow-hidden rounded-lg border border-border bg-card"
+    >
       <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-2.5">
         <div>
           <h3 className="text-sm font-semibold tracking-wide uppercase">
@@ -300,12 +312,15 @@ function EstimateSectionComponent({
                   item.unit_cost
                 );
                 const isSelected = selectedIds.has(localId);
+                const isHighlighted = highlightedLineId === localId;
                 const isDragging = draggingIndex === index;
                 const isDragOver = dragOverIndex === index;
 
                 return (
                   <tr
                     key={localId}
+                    id={`estimate-line-${localId}`}
+                    data-estimate-line-id={localId}
                     onDragOver={(event) => {
                       event.preventDefault();
                       setDragOverIndex(index);
@@ -319,6 +334,8 @@ function EstimateSectionComponent({
                     className={cn(
                       "border-b border-border/60 transition-colors hover:bg-muted/10",
                       isSelected && "bg-primary/5",
+                      isHighlighted &&
+                        "bg-primary/10 ring-2 ring-inset ring-primary/50",
                       isDragging && "opacity-50",
                       isDragOver && "ring-2 ring-inset ring-primary/40"
                     )}
@@ -354,6 +371,7 @@ function EstimateSectionComponent({
                         localId,
                         onApplyPickerSelection,
                         onUpdateRow,
+                        markEstimateLineFocus: true,
                       })}
                     </td>
                     <td className="border-r border-border/40 p-0">
@@ -387,6 +405,7 @@ function EstimateSectionComponent({
                           onUpdateRow(localId, "unit_cost", nextValue)
                         }
                         className={numberInputClassName}
+                        markAsEstimateUnitCostFocus
                       />
                     </td>
                     <td className="border-r border-border/40 px-2 py-2 text-right font-medium tabular-nums">

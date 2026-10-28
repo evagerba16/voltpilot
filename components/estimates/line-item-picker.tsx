@@ -48,6 +48,7 @@ type LineItemPickerProps = {
   onChange: (selection: LineItemPickerSelection) => void;
   className?: string;
   placeholder?: string;
+  markAsEstimateLineFocus?: boolean;
 };
 
 type DropdownEntry =
@@ -130,6 +131,7 @@ export function LineItemPicker({
   onChange,
   className,
   placeholder,
+  markAsEstimateLineFocus = false,
 }: LineItemPickerProps) {
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -687,6 +689,7 @@ export function LineItemPicker({
           aria-controls={listboxId}
           aria-autocomplete="list"
           autoComplete="off"
+          {...(markAsEstimateLineFocus ? { "data-estimate-line-focus": "" } : {})}
           onFocus={() => {
             setOpen(true);
             setHighlightIndex(0);

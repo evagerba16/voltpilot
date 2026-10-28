@@ -27,6 +27,7 @@ function SummaryRow({
   onPercentChange,
   emphasized = false,
   muted = false,
+  percentInputId,
 }: {
   label: string;
   amount: number;
@@ -35,6 +36,7 @@ function SummaryRow({
   onPercentChange?: (value: number) => void;
   emphasized?: boolean;
   muted?: boolean;
+  percentInputId?: string;
 }) {
   return (
     <div
@@ -59,6 +61,7 @@ function SummaryRow({
         {onPercentChange ? (
           <div className="flex items-center gap-1">
             <input
+              id={percentInputId}
               type="number"
               min="0"
               step="0.1"
@@ -142,6 +145,7 @@ export function EstimateSummary({
           amount={totals.profitAmount}
           percent={profitMarginPercent}
           onPercentChange={onProfitMarginChange}
+          percentInputId="estimate-summary-profit-percent"
         />
         <SummaryRow
           label="Tax"

@@ -1,7 +1,15 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
 import { createProposalFromEstimate } from "@/app/(dashboard)/proposals/actions";
 import {
@@ -127,6 +135,102 @@ function serializeState(state: EstimateBuilderState) {
   return JSON.stringify(state);
 }
 
+type ReviewLineFocusField = "description" | "unit_cost";
+
+type EstimateFocusRequest =
+  | {
+      kind: "line";
+      localId: string;
+      category: EstimateCategory;
+      field: ReviewLineFocusField;
+    }
+  | { kind: "summary-profit" };
+
+function lineDescriptionsMatch(existing: string, suggested: string) {
+  const a = existing.trim().toLowerCase();
+  const b = suggested.trim().toLowerCase();
+
+  if (!a || !b) {
+    return false;
+  }
+
+  return a === b || a.includes(b) || b.includes(a);
+}
+
+function findExistingLineForReview(
+  lineItems: EstimateLineItemInput[],
+  recommendation: AiReviewRecommendation,
+  defaultCategory: EstimateCategory
+): { localId: string; category: EstimateCategory } | null {
+  if (recommendation.relatedLineItemId) {
+    for (let index = 0; index < lineItems.length; index += 1) {
+      const item = lineItems[index];
+      const localId = getLineItemLocalId(item, index);
+
+      if (
+        item.id === recommendation.relatedLineItemId ||
+        localId === recommendation.relatedLineItemId
+      ) {
+        return { localId, category: item.category };
+      }
+    }
+  }
+
+  const suggestedDescription = recommendation.suggestedLineItem?.description;
+  const searchCategory =
+    recommendation.suggestedLineItem?.category ?? defaultCategory;
+
+  if (suggestedDescription?.trim()) {
+    for (let index = 0; index < lineItems.length; index += 1) {
+      const item = lineItems[index];
+
+      if (item.category !== searchCategory) {
+        continue;
+      }
+
+      if (lineDescriptionsMatch(item.description, suggestedDescription)) {
+        return {
+          localId: getLineItemLocalId(item, index),
+          category: item.category,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function focusEstimateLine(
+  localId: string,
+  category: EstimateCategory,
+  field: ReviewLineFocusField
+) {
+  document.getElementById(`estimate-section-${category}`)?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+
+  const row = document.getElementById(`estimate-line-${localId}`);
+  row?.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  const selector =
+    field === "unit_cost"
+      ? "[data-estimate-line-unit-cost]"
+      : "[data-estimate-line-focus]";
+  const input = row?.querySelector<HTMLElement>(selector);
+  input?.focus({ preventScroll: true });
+}
+
+function focusEstimateSummaryProfit() {
+  document.getElementById("estimate-summary")?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+  document
+    .getElementById("estimate-summary-profit-percent")
+    ?.focus({ preventScroll: true });
+}
+
 export function EstimateBuilder({
   estimateId,
   initialState,
@@ -142,6 +246,11 @@ export function EstimateBuilder({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [focusRequest, setFocusRequest] = useState<EstimateFocusRequest | null>(
+    null
+  );
+  const [highlightedLineId, setHighlightedLineId] = useState<string | null>(null);
+  const lineHighlightTimerRef = useRef<number | null>(null);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -268,6 +377,39 @@ export function EstimateBuilder({
 
   const markDirtyRef = useRef(markDirty);
   markDirtyRef.current = markDirty;
+
+  useLayoutEffect(() => {
+    if (!focusRequest) {
+      return;
+    }
+
+    const request = focusRequest;
+    setFocusRequest(null);
+
+    if (request.kind === "summary-profit") {
+      focusEstimateSummaryProfit();
+      return;
+    }
+
+    focusEstimateLine(request.localId, request.category, request.field);
+    setHighlightedLineId(request.localId);
+
+    if (lineHighlightTimerRef.current !== null) {
+      window.clearTimeout(lineHighlightTimerRef.current);
+    }
+
+    lineHighlightTimerRef.current = window.setTimeout(() => {
+      setHighlightedLineId(null);
+      lineHighlightTimerRef.current = null;
+    }, 2500);
+
+    return () => {
+      if (lineHighlightTimerRef.current !== null) {
+        window.clearTimeout(lineHighlightTimerRef.current);
+        lineHighlightTimerRef.current = null;
+      }
+    };
+  }, [focusRequest, state.line_items]);
 
   const updateLineItem = useCallback(
     (
@@ -756,99 +898,134 @@ export function EstimateBuilder({
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function handleReviewAddMaterial(recommendation: AiReviewRecommendation) {
-    const suggestion = recommendation.suggestedLineItem;
+  function handleReviewNavigateToLine(
+    recommendation: AiReviewRecommendation,
+    defaultCategory: EstimateCategory,
+    field: ReviewLineFocusField = "description"
+  ) {
+    setReviewOpen(false);
 
-    if (!suggestion) {
-      addLineItem("materials");
-      return;
-    }
+    const existing = findExistingLineForReview(
+      state.line_items,
+      recommendation,
+      defaultCategory
+    );
 
-    setState((current) => {
-      const categoryItems = current.line_items.filter(
-        (item) => item.category === suggestion.category
-      );
-
-      return {
-        ...current,
-        line_items: [
-          ...current.line_items,
-          buildLineItemFromSuggestion(suggestion, categoryItems.length),
-        ],
-      };
-    });
-    markDirty();
-  }
-
-  function handleReviewUpdateLabor(recommendation: AiReviewRecommendation) {
-    const suggestion = recommendation.suggestedLineItem;
-
-    if (suggestion?.category === "labor") {
-      setState((current) => {
-        const categoryItems = current.line_items.filter(
-          (item) => item.category === "labor"
-        );
-
-        return {
-          ...current,
-          line_items: [
-            ...current.line_items,
-            buildLineItemFromSuggestion(suggestion, categoryItems.length),
-          ],
-        };
+    if (existing) {
+      setFocusRequest({
+        kind: "line",
+        localId: existing.localId,
+        category: existing.category,
+        field,
       });
-      markDirty();
       return;
     }
 
-    addLineItem("labor");
-  }
+    const suggestion = recommendation.suggestedLineItem;
+    const targetCategory = suggestion?.category ?? defaultCategory;
 
-  function handleReviewUpdateUnit(recommendation: AiReviewRecommendation) {
-    if (recommendation.relatedLineItemId) {
-      const lineId = recommendation.relatedLineItemId;
-      const suggestedCost = recommendation.suggestedUnitCost;
+    if (suggestion) {
+      const categoryItems = state.line_items.filter(
+        (item) => item.category === targetCategory
+      );
+      const newItem = buildLineItemFromSuggestion(
+        suggestion,
+        categoryItems.length
+      );
 
       setState((current) => ({
         ...current,
-        line_items: current.line_items.map((item, index) => {
-          const localId = getLineItemLocalId(item, index);
-          if (localId !== lineId && item.id !== lineId) {
-            return item;
-          }
-
-          return {
-            ...item,
-            unit_cost:
-              suggestedCost !== undefined && suggestedCost > 0 ?
-                suggestedCost
-              : item.unit_cost,
-          };
-        }),
+        line_items: [...current.line_items, newItem],
       }));
       markDirty();
-      scrollToSummary();
+      setFocusRequest({
+        kind: "line",
+        localId: newItem.id ?? getLineItemLocalId(newItem, 0),
+        category: targetCategory,
+        field,
+      });
       return;
     }
 
-    scrollToSummary();
+    const categoryItems = state.line_items.filter(
+      (item) => item.category === targetCategory
+    );
+    const newItem = createEmptyLineItem(targetCategory, categoryItems.length);
+
+    setState((current) => ({
+      ...current,
+      line_items: [...current.line_items, newItem],
+    }));
+    markDirty();
+    setFocusRequest({
+      kind: "line",
+      localId: newItem.id ?? getLineItemLocalId(newItem, 0),
+      category: targetCategory,
+      field,
+    });
+  }
+
+  function handleReviewAddMaterial(recommendation: AiReviewRecommendation) {
+    handleReviewNavigateToLine(recommendation, "materials", "description");
+  }
+
+  function handleReviewUpdateLabor(recommendation: AiReviewRecommendation) {
+    handleReviewNavigateToLine(recommendation, "labor", "description");
+  }
+
+  function handleReviewUpdateUnit(recommendation: AiReviewRecommendation) {
+    const defaultCategory =
+      recommendation.suggestedLineItem?.category ?? "materials";
+    const existing = findExistingLineForReview(
+      state.line_items,
+      recommendation,
+      defaultCategory
+    );
+
+    setReviewOpen(false);
+
+    if (existing) {
+      setFocusRequest({
+        kind: "line",
+        localId: existing.localId,
+        category: existing.category,
+        field: "unit_cost",
+      });
+      return;
+    }
+
+    if (recommendation.suggestedLineItem) {
+      handleReviewNavigateToLine(recommendation, defaultCategory, "unit_cost");
+      return;
+    }
+
+    setFocusRequest({ kind: "summary-profit" });
   }
 
   function handleReviewIncreaseMarkup(recommendation: AiReviewRecommendation) {
     const increase = recommendation.suggestedMarkupIncrease ?? 3;
 
+    setReviewOpen(false);
     applyProfitMargin(
-      Math.min(50, Number((state.profit_margin_percent + increase).toFixed(2)))
+      Math.min(50, Number((state.profit_margin_percent + increase).toFixed(2))),
+      { focusSummary: false }
     );
+    setFocusRequest({ kind: "summary-profit" });
   }
 
-  function applyProfitMargin(targetPercent: number) {
+  function applyProfitMargin(
+    targetPercent: number,
+    options: { focusSummary?: boolean } = {}
+  ) {
     setState((current) => ({
       ...current,
       profit_margin_percent: Math.min(50, Number(targetPercent.toFixed(2))),
     }));
     markDirty();
-    scrollToSummary();
+
+    if (options.focusSummary !== false) {
+      scrollToSummary();
+    }
   }
 
   function handleOpenReview() {
@@ -1172,6 +1349,7 @@ export function EstimateBuilder({
               category={category}
               label={ESTIMATE_CATEGORY_LABELS[category]}
               items={lineItemsByCategory[category]}
+              highlightedLineId={highlightedLineId}
               selectedIds={selectedLineIds}
               onToggleSelect={toggleLineSelection}
               onToggleSelectAll={toggleSelectAllInSection}
