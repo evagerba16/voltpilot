@@ -2,7 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
 import {
   archiveProposal,
@@ -116,6 +124,9 @@ export function ProposalEditor({
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [devPortalPending, startDevPortalTransition] = useTransition();
+  const [pendingFocusField, setPendingFocusField] = useState<
+    keyof ProposalEditorState | null
+  >(null);
   const confirm = useConfirm();
   const toast = useToast();
 
@@ -183,7 +194,20 @@ export function ProposalEditor({
 
   function scrollToReadinessReview() {
     const element = document.getElementById("proposal-send-readiness");
-    element?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    const firstBlocker = sendBlockers.find((blocker) => blocker.field);
+    if (canEdit && firstBlocker?.field) {
+      focusProposalField(firstBlocker.field);
+      return;
+    }
+
+    toast.error(
+      "Send readiness details aren't visible on this page. Open the proposal in edit mode or review the locked proposal notice below."
+    );
   }
 
   function handlePrimaryAction() {
@@ -229,14 +253,39 @@ export function ProposalEditor({
 
   function focusProposalField(field: keyof ProposalEditorState) {
     setMode("edit");
-    window.requestAnimationFrame(() => {
-      const element = document.getElementById(field);
-      element?.scrollIntoView({ behavior: "smooth", block: "center" });
-      if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-        element.focus();
-      }
-    });
+    setPendingFocusField(field);
   }
+
+  useLayoutEffect(() => {
+    if (!pendingFocusField) {
+      return;
+    }
+
+    if (!canEdit) {
+      setPendingFocusField(null);
+      return;
+    }
+
+    if (mode !== "edit") {
+      return;
+    }
+
+    const field = pendingFocusField;
+    setPendingFocusField(null);
+
+    const element = document.getElementById(String(field));
+    if (!element) {
+      return;
+    }
+
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (
+      element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement
+    ) {
+      element.focus({ preventScroll: true });
+    }
+  }, [pendingFocusField, mode, canEdit]);
 
   const runAutosave = useCallback(
     async (currentState: ProposalEditorState) => {
@@ -453,6 +502,16 @@ export function ProposalEditor({
       return;
     }
 
+    if (insight.id === "expiring-soon") {
+      if (!canEdit) {
+        toast.error(PROPOSAL_LOCKED_MESSAGE);
+        return;
+      }
+
+      focusProposalField("expiration_date");
+      return;
+    }
+
     setMode("edit");
   }
 
@@ -560,11 +619,12 @@ export function ProposalEditor({
         </AlertBanner>
       ) : null}
 
-      {canEdit && !reviewResult.readyToSend && !isAccepted ? (
+      {!isAccepted &&
+      (!canEdit || !reviewResult.readyToSend || reviewResult.score >= 80) ? (
         <AiProposalReviewCard
           id="proposal-send-readiness"
           state={state}
-          onFocusField={focusProposalField}
+          onFocusField={canEdit ? focusProposalField : undefined}
         />
       ) : null}
 
