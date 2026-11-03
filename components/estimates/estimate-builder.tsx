@@ -268,8 +268,12 @@ export function EstimateBuilder({
   const confirm = useConfirm();
 
   const lastSavedStateRef = useRef(serializeState(initialState));
+  const stateRef = useRef(initialState);
+  stateRef.current = state;
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSavingRef = useRef(false);
+  const saveInFlightRef = useRef<Promise<void> | null>(null);
+  const finalizeBlockedRef = useRef(false);
   const selectedLineIdsRef = useRef(selectedLineIds);
   const reviewResultRef = useRef(reviewResult);
 
@@ -706,6 +710,78 @@ export function EstimateBuilder({
     }
   }, [estimateId]);
 
+  const clearAutosaveTimer = useCallback(() => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+  }, []);
+
+  const persistEditorState = useCallback(
+    async (
+      currentState: EstimateBuilderState,
+      mode: "manual" | "autosave"
+    ): Promise<{ ok: true } | { ok: false; error: string }> => {
+      if (finalizeBlockedRef.current) {
+        return { ok: false, error: "Save interrupted while marking final." };
+      }
+
+      if (saveInFlightRef.current) {
+        await saveInFlightRef.current;
+      }
+
+      const serialized = serializeState(currentState);
+      if (serialized === lastSavedStateRef.current) {
+        return { ok: true };
+      }
+
+      if (finalizeBlockedRef.current) {
+        return { ok: false, error: "Save interrupted while marking final." };
+      }
+
+      let outcome: { ok: true } | { ok: false; error: string } = { ok: true };
+
+      const run = async () => {
+        isSavingRef.current = true;
+        setSaveStatus("saving");
+        setError(null);
+
+        const result =
+          mode === "manual"
+            ? await saveEstimate(estimateId, currentState)
+            : await autosaveEstimate(estimateId, currentState);
+
+        if (result.error) {
+          setError(result.error);
+          setSaveStatus("error");
+          outcome = { ok: false, error: result.error };
+          return;
+        }
+
+        lastSavedStateRef.current = serialized;
+        setSavedAt(result.savedAt ?? new Date().toISOString());
+        setSaveStatus("saved");
+
+        if (mode === "manual") {
+          await refreshVersions();
+        }
+      };
+
+      const promise = run().finally(() => {
+        isSavingRef.current = false;
+        if (saveInFlightRef.current === promise) {
+          saveInFlightRef.current = null;
+        }
+      });
+
+      saveInFlightRef.current = promise;
+      await promise;
+
+      return outcome;
+    },
+    [estimateId, refreshVersions]
+  );
+
   const handleSave = useCallback(() => {
     if (isLocked) {
       setError("This estimate is final. Reopen it before making changes.");
@@ -713,24 +789,14 @@ export function EstimateBuilder({
       return;
     }
 
-    setError(null);
-
     startTransition(async () => {
-      setSaveStatus("saving");
-      const result = await saveEstimate(estimateId, state);
-
-      if (result.error) {
+      const result = await persistEditorState(state, "manual");
+      if (!result.ok && result.error) {
         setError(result.error);
         setSaveStatus("error");
-        return;
       }
-
-      lastSavedStateRef.current = serializeState(state);
-      setSavedAt(result.savedAt ?? new Date().toISOString());
-      setSaveStatus("saved");
-      await refreshVersions();
     });
-  }, [estimateId, isLocked, state, refreshVersions]);
+  }, [isLocked, persistEditorState, state]);
 
   useKeyboardShortcut({ key: "s", metaOrCtrl: true }, handleSave);
   useKeyboardShortcut({ key: "Escape" }, clearLineSelection);
@@ -781,38 +847,17 @@ export function EstimateBuilder({
 
   const runAutosave = useCallback(
     async (currentState: EstimateBuilderState) => {
-      if (isLocked || isSavingRef.current) {
+      if (isLocked || finalizeBlockedRef.current) {
         return;
       }
 
-      const serialized = serializeState(currentState);
-
-      if (serialized === lastSavedStateRef.current) {
-        return;
-      }
-
-      isSavingRef.current = true;
-      setSaveStatus("saving");
-
-      const result = await autosaveEstimate(estimateId, currentState);
-
-      isSavingRef.current = false;
-
-      if (result.error) {
-        setError(result.error);
-        setSaveStatus("error");
-        return;
-      }
-
-      lastSavedStateRef.current = serialized;
-      setSavedAt(result.savedAt ?? new Date().toISOString());
-      setSaveStatus("saved");
+      await persistEditorState(currentState, "autosave");
     },
-    [estimateId, isLocked]
+    [isLocked, persistEditorState]
   );
 
   useEffect(() => {
-    if (isLocked) {
+    if (isLocked || finalizeBlockedRef.current) {
       return;
     }
 
@@ -822,20 +867,16 @@ export function EstimateBuilder({
       return;
     }
 
-    if (autosaveTimerRef.current) {
-      clearTimeout(autosaveTimerRef.current);
-    }
+    clearAutosaveTimer();
 
     autosaveTimerRef.current = setTimeout(() => {
-      void runAutosave(state);
+      void runAutosave(stateRef.current);
     }, AUTOSAVE_DEBOUNCE_MS);
 
     return () => {
-      if (autosaveTimerRef.current) {
-        clearTimeout(autosaveTimerRef.current);
-      }
+      clearAutosaveTimer();
     };
-  }, [isLocked, state, runAutosave]);
+  }, [isLocked, state, runAutosave, clearAutosaveTimer]);
 
   async function runReview() {
     const previousReview = reviewResultRef.current;
@@ -1058,14 +1099,29 @@ export function EstimateBuilder({
       return;
     }
 
+    finalizeBlockedRef.current = true;
+    clearAutosaveTimer();
+
+    const flush = await persistEditorState(stateRef.current, "autosave");
+    if (!flush.ok) {
+      finalizeBlockedRef.current = false;
+      setError(flush.error);
+      setSaveStatus("error");
+      return;
+    }
+
     startTransition(async () => {
-      const result = await finalizeEstimate(estimateId);
-      if (result?.error) {
-        setError(result.error);
-        return;
-      }
-      if (result.status) {
-        setStatus(result.status);
+      try {
+        const result = await finalizeEstimate(estimateId);
+        if (result?.error) {
+          setError(result.error);
+          return;
+        }
+        if (result.status) {
+          setStatus(result.status);
+        }
+      } finally {
+        finalizeBlockedRef.current = false;
       }
     });
   }

@@ -20,7 +20,12 @@ export function useKeyboardShortcut(
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== keys.key.toLowerCase()) {
+      const pressedKey = event.key;
+      if (!pressedKey || typeof pressedKey !== "string") {
+        return;
+      }
+
+      if (pressedKey.toLowerCase() !== keys.key.toLowerCase()) {
         return;
       }
 

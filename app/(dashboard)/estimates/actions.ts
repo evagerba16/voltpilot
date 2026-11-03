@@ -189,14 +189,23 @@ async function persistEstimate(
     ...(options.isAutosave ? { last_autosaved_at: new Date().toISOString() } : {}),
   };
 
-  const { error: estimateError } = await supabase
+  const { data: updatedEstimate, error: estimateError } = await supabase
     .from("estimates")
     .update(estimateUpdate)
     .eq("id", estimateId)
-    .eq("organization_id", context.organizationId);
+    .eq("organization_id", context.organizationId)
+    .eq("status", "Draft")
+    .select("id")
+    .maybeSingle();
 
   if (estimateError) {
     return { error: "We couldn't save this estimate. Try again in a moment." };
+  }
+
+  if (!updatedEstimate) {
+    return {
+      error: "This estimate is final. Reopen it before making changes.",
+    };
   }
 
   const lineItemsWithIds = input.line_items.map((item) => ({
@@ -542,14 +551,24 @@ export async function finalizeEstimate(estimateId: string) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: finalizedRow, error } = await supabase
     .from("estimates")
     .update({ status: "Final" })
     .eq("id", estimateId)
-    .eq("organization_id", context.organizationId);
+    .eq("organization_id", context.organizationId)
+    .eq("status", "Draft")
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return { error: "We couldn't mark this estimate as final. Try again in a moment." };
+  }
+
+  if (!finalizedRow) {
+    return {
+      error:
+        "This estimate changed while you were finishing up. Refresh and try again.",
+    };
   }
 
   revalidatePath("/estimates");
